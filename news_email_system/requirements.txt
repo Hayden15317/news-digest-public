@@ -1,0 +1,21 @@
+# 自动新闻邮件推送系统 - 依赖包
+# 安装方式: pip install -r requirements.txt
+
+# RSS解析
+feedparser>=6.0.0
+
+# HTML解析
+beautifulsoup4>=4.10.0
+lxml>=4.6.0
+
+# HTTP请求
+requests>=2.26.0
+
+# 定时任务调度
+apscheduler>=3.8.0
+
+# 时区处理
+pytz>=2021.3
+
+# 数据类（Python 3.6+ 不需要，低版本需要）
+# dataclasses>=0.6; python_version<"3.7"

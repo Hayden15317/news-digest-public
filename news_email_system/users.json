@@ -1,0 +1,86 @@
+{
+  "users": [
+    {
+      "user_id": "default-self-test",
+      "name": "默认自测版",
+      "enabled": true,
+      "recipient_emails": [
+        "Hayden15317@163.com"
+      ],
+      "sender_name": "新闻推送助手",
+      "reply_to": "Hayden15317@163.com",
+      "subject_prefix": "【广发基金视角晨报】",
+      "send_time": "08:00",
+      "timezone": "Asia/Shanghai",
+      "preferences": {
+        "categories": [
+          "行业新闻",
+          "金融新闻",
+          "时政新闻"
+        ],
+        "subcategories": [
+          "证券",
+          "基金",
+          "A股",
+          "港股",
+          "行情",
+          "宏观经济",
+          "利率",
+          "汇率",
+          "央行",
+          "财政部",
+          "证监会",
+          "人大"
+        ],
+        "include_keywords": [
+          "基金",
+          "券商",
+          "ETF",
+          "A股",
+          "港股",
+          "货币政策"
+        ],
+        "exclude_keywords": [],
+        "max_items": 24,
+        "min_relevance_score": 0,
+        "send_empty_email": false
+      }
+    },
+    {
+      "user_id": "team-template",
+      "name": "团队订阅模板",
+      "enabled": false,
+      "recipient_emails": [
+        "someone@example.com"
+      ],
+      "sender_name": "新闻推送助手",
+      "reply_to": "",
+      "subject_prefix": "【团队晨报】",
+      "send_time": "08:30",
+      "timezone": "Asia/Shanghai",
+      "preferences": {
+        "categories": [
+          "行业新闻",
+          "金融新闻"
+        ],
+        "subcategories": [
+          "证券",
+          "基金",
+          "A股",
+          "港股",
+          "宏观经济",
+          "利率",
+          "汇率"
+        ],
+        "include_keywords": [
+          "基金",
+          "ETF"
+        ],
+        "exclude_keywords": [],
+        "max_items": 18,
+        "min_relevance_score": 0,
+        "send_empty_email": false
+      }
+    }
+  ]
+}

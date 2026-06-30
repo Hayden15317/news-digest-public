@@ -1,0 +1,2374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新闻推送团队配置器</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06111f;
+      --panel: rgba(9, 18, 34, 0.88);
+      --panel-soft: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #eff6ff;
+      --muted: #93a4bd;
+      --accent: #67e8f9;
+      --accent-2: #fbbf24;
+      --good: #34d399;
+      --shadow: 0 24px 80px rgba(2, 6, 23, 0.55);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.15), transparent 25%),
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.14), transparent 22%),
+        linear-gradient(180deg, #020617 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 32px;
+      padding: 34px;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.14), transparent 22%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1.25fr 0.95fr;
+      align-items: end;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid rgba(103, 232, 249, 0.2);
+      border-radius: 999px;
+      color: #d8fbff;
+      background: rgba(103, 232, 249, 0.08);
+      font-size: 12px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 0;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+      font-size: clamp(36px, 6vw, 68px);
+      line-height: 1.02;
+    }
+
+    .gradient-text {
+      display: block;
+      background: linear-gradient(120deg, #f8fafc, #67e8f9, #fbbf24);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      margin-top: 18px;
+      max-width: 820px;
+      color: #d0dbea;
+      font-size: 17px;
+      line-height: 1.9;
+    }
+
+    .stats {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stat {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      margin-top: 12px;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+      font-size: 24px;
+    }
+
+    .status {
+      position: relative;
+      margin-top: 24px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(251, 191, 36, 0.22);
+      background: rgba(251, 191, 36, 0.1);
+      color: #fff4cf;
+    }
+
+    .layout {
+      display: grid;
+      gap: 28px;
+      grid-template-columns: 1.08fr 0.92fr;
+      margin-top: 28px;
+    }
+
+    .panel {
+      border-radius: 28px;
+      padding: 24px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+      font-size: 28px;
+    }
+
+    .section-title small {
+      display: block;
+      color: var(--muted);
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .template-grid,
+    .field-grid,
+    .chip-grid,
+    .button-row {
+      display: grid;
+      gap: 14px;
+    }
+
+    .template-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .template-card {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .template-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+
+    .template-card.active {
+      border-color: rgba(103, 232, 249, 0.48);
+      background: rgba(103, 232, 249, 0.1);
+      box-shadow: 0 0 0 1px rgba(103, 232, 249, 0.18);
+    }
+
+    .template-card h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .template-card p {
+      margin: 10px 0 0;
+      color: #ccd7e8;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .template-card .tag {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: #ffe7a5;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .field-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    label {
+      display: block;
+    }
+
+    label span {
+      display: block;
+      margin-bottom: 8px;
+      color: #d9e4f2;
+      font-size: 14px;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(2, 6, 23, 0.72);
+      color: var(--text);
+      padding: 13px 14px;
+      outline: none;
+      font-size: 14px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(103, 232, 249, 0.5);
+      box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.12);
+    }
+
+    textarea {
+      min-height: 118px;
+      resize: vertical;
+      line-height: 1.75;
+    }
+
+    .chip-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .chip-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      margin-top: 14px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #d4deec;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .chip.active {
+      border-color: rgba(103, 232, 249, 0.5);
+      background: rgba(103, 232, 249, 0.1);
+      color: #ddfbff;
+    }
+
+    .slider-wrap {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .slider-head strong {
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+      font-size: 34px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      margin-top: 18px;
+      appearance: none;
+      height: 8px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(2, 6, 23, 0.95);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.12);
+      cursor: pointer;
+    }
+
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .button-row {
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      justify-content: start;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 11px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .primary {
+      border-color: rgba(251, 191, 36, 0.32);
+      background: rgba(251, 191, 36, 0.14);
+      color: #fff2ca;
+    }
+
+    .secondary:hover,
+    .primary:hover {
+      border-color: rgba(103, 232, 249, 0.45);
+    }
+
+    pre {
+      margin: 0;
+      max-height: 620px;
+      overflow: auto;
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: #020617;
+      color: #e2f4ff;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .command-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .command-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #dbeafe;
+    }
+
+    code {
+      display: block;
+      color: #b5f5ff;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.8;
+    }
+
+    .tips {
+      margin-top: 18px;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .service-indicator {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: #d8e4f5;
+      font-size: 14px;
+    }
+
+    .service-indicator.online {
+      border-color: rgba(52, 211, 153, 0.28);
+      background: rgba(52, 211, 153, 0.12);
+      color: #ddfff3;
+    }
+
+    .service-indicator.offline {
+      border-color: rgba(251, 191, 36, 0.22);
+      background: rgba(251, 191, 36, 0.08);
+      color: #fff4cf;
+    }
+
+    .result-panel {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    .result-panel.error {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(127, 29, 29, 0.18);
+    }
+
+    .result-panel.success {
+      border-color: rgba(52, 211, 153, 0.28);
+      background: rgba(6, 95, 70, 0.18);
+    }
+
+    .result-title {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .result-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #dbeafe;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .result-meta {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .result-chip {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .result-chip-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .result-chip-value {
+      font-size: 14px;
+      color: #eef6ff;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    .progress-box {
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      background: rgba(30, 41, 59, 0.42);
+    }
+
+    .progress-box.hidden,
+    .preview-highlights.hidden,
+    .result-meta.hidden {
+      display: none;
+    }
+
+    .progress-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e0edff;
+    }
+
+    .progress-subtitle {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #c6d5ef;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148, 163, 184, 0.14);
+      margin-top: 10px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+      transition: width 0.45s ease;
+    }
+
+    .preview-highlights {
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(52, 211, 153, 0.18);
+      background: rgba(6, 95, 70, 0.12);
+    }
+
+    .preview-highlights h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #e8fff6;
+    }
+
+    .preview-highlights ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #d9fceb;
+      line-height: 1.75;
+      font-size: 13px;
+    }
+
+    .preview-highlights li + li {
+      margin-top: 6px;
+    }
+
+    .sender-mode-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, 1fr);
+      margin-bottom: 16px;
+    }
+
+    .sender-mode-card {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      text-align: left;
+    }
+
+    .sender-mode-card.active {
+      border-color: rgba(103, 232, 249, 0.5);
+      background: rgba(103, 232, 249, 0.1);
+      color: #defbff;
+    }
+
+    .sender-mode-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .sender-mode-card span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    input.invalid,
+    textarea.invalid,
+    select.invalid {
+      border-color: rgba(248, 113, 113, 0.65);
+      box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.14);
+    }
+
+    input.warning,
+    textarea.warning,
+    select.warning {
+      border-color: rgba(251, 191, 36, 0.5);
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.12);
+    }
+
+    .workspace-box,
+    .summary-grid,
+    .validation-panel {
+      margin-top: 18px;
+    }
+
+    .workspace-box {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .workspace-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .workspace-title {
+      font-size: 14px;
+      color: #dbeafe;
+    }
+
+    .workspace-hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .workspace-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 12px 0 16px;
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .danger {
+      border-color: rgba(248, 113, 113, 0.24);
+      background: rgba(248, 113, 113, 0.12);
+      color: #ffe4e6;
+    }
+
+    .user-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .user-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    }
+
+    .user-card.active {
+      border-color: rgba(103, 232, 249, 0.45);
+      background: rgba(103, 232, 249, 0.09);
+    }
+
+    .user-card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .user-card h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .user-card small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+    }
+
+    .user-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: #d8e4f5;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .summary-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .summary-card-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .summary-card-value {
+      margin-top: 10px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #e5f2ff;
+      white-space: pre-wrap;
+    }
+
+    .validation-panel {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .validation-panel.good {
+      border-color: rgba(52, 211, 153, 0.26);
+      background: rgba(52, 211, 153, 0.08);
+    }
+
+    .validation-panel.warn {
+      border-color: rgba(251, 191, 36, 0.26);
+      background: rgba(251, 191, 36, 0.08);
+    }
+
+    .validation-panel.error {
+      border-color: rgba(248, 113, 113, 0.28);
+      background: rgba(127, 29, 29, 0.18);
+    }
+
+    .validation-title {
+      color: #dbeafe;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .validation-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding-left: 18px;
+      color: #dce8f8;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .validation-empty {
+      color: #ddfff3;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(2, 6, 23, 0.68);
+      z-index: 50;
+    }
+
+    .modal-card {
+      width: min(760px, 100%);
+      max-height: 80vh;
+      overflow: auto;
+      padding: 24px;
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      background: rgba(9, 18, 34, 0.96);
+      box-shadow: var(--shadow);
+    }
+
+    .modal-actions {
+      margin-top: 18px;
+    }
+
+    @media (max-width: 1180px) {
+      .hero-content,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .template-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 16px;
+      }
+
+      .hero,
+      .panel {
+        padding: 18px;
+        border-radius: 24px;
+      }
+
+      .field-grid,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        grid-auto-flow: row;
+      }
+
+      .sender-mode-grid,
+      .summary-grid,
+      .result-meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-content">
+        <div>
+          <div class="eyebrow">Team Configurator</div>
+          <h1>
+            直接生成可复用的
+            <span class="gradient-text">新闻推送团队配置</span>
+          </h1>
+          <div class="subtitle">
+            这个网页不依赖开发服务，双击即可打开。选择团队模板后，填写收件人和偏好，就能直接生成兼容 `users.json` 的配置文件。
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">模板数量</div>
+            <div class="stat-value">3 套</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">输出格式</div>
+            <div class="stat-value">users.json</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">打开方式</div>
+            <div class="stat-value">固定本地地址</div>
+          </div>
+        </div>
+      </div>
+      <div id="status" class="status">当前页面既可生成配置，也可在本地服务在线时直接执行测试预览或正式发送。</div>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="section-title">
+          <div>
+            <small>步骤 1</small>
+            <h2>选择团队模板</h2>
+          </div>
+        </div>
+        <div id="template-grid" class="template-grid"></div>
+        <div class="workspace-box">
+          <div class="workspace-head">
+            <div>
+              <div class="workspace-title">工作区用户管理</div>
+            <div class="workspace-hint">支持导入已有 `users.json`、切换编辑多个用户、自动保存浏览器草稿。</div>
+            </div>
+          </div>
+          <div class="workspace-actions">
+            <button id="import-btn" class="secondary" type="button">导入已有 users.json</button>
+            <button id="add-user-btn" class="ghost" type="button">新增用户</button>
+            <button id="duplicate-user-btn" class="ghost" type="button">复制当前</button>
+            <button id="delete-user-btn" class="danger" type="button">删除当前</button>
+            <button id="clear-draft-btn" class="ghost" type="button">清空草稿</button>
+          </div>
+          <input id="import-file" class="hidden" type="file" accept=".json,application/json">
+          <div id="draft-indicator" class="workspace-hint">草稿会自动保存在当前浏览器。</div>
+          <div id="user-list" class="user-list"></div>
+        </div>
+
+        <div class="section-title" style="margin-top: 26px;">
+          <div>
+            <small>步骤 2</small>
+            <h2>填写基础信息</h2>
+          </div>
+        </div>
+        <div class="field-grid">
+          <label>
+            <span>用户标识 user_id</span>
+            <input id="user_id" type="text">
+          </label>
+          <label>
+            <span>团队名称</span>
+            <input id="name" type="text">
+          </label>
+          <label>
+            <span>收件人</span>
+            <input id="recipient_emails" type="text" placeholder="多个邮箱用逗号分隔">
+          </label>
+          <label>
+            <span>回复地址</span>
+            <input id="reply_to" type="text">
+          </label>
+          <label>
+            <span>标题前缀</span>
+            <input id="subject_prefix" type="text">
+          </label>
+          <label>
+            <span>发送人显示名</span>
+            <input id="sender_name" type="text">
+          </label>
+          <label>
+            <span>发送时间</span>
+            <input id="send_time" type="text" placeholder="08:00">
+          </label>
+          <label>
+            <span>时区</span>
+            <input id="timezone" type="text">
+          </label>
+        </div>
+
+        <div class="section-title" style="margin-top: 26px;">
+          <div>
+            <small>步骤 2A</small>
+            <h2>发件人配置</h2>
+          </div>
+        </div>
+        <div id="sender-mode-grid" class="sender-mode-grid">
+          <button id="sender-mode-shared" class="sender-mode-card active" type="button">
+            <strong>共用系统发件账号</strong>
+            <span>推荐多数场景使用。无需填写 SMTP，直接沿用系统共享发件邮箱。</span>
+          </button>
+          <button id="sender-mode-custom" class="sender-mode-card" type="button">
+            <strong>使用个人发件账号</strong>
+            <span>这个用户单独填写自己的 SMTP、发件邮箱和授权码，独立发送。</span>
+          </button>
+        </div>
+        <div id="custom-smtp-fields" class="field-grid hidden">
+          <label>
+            <span>SMTP 服务器</span>
+            <input id="smtp_server" type="text" placeholder="留空则使用系统共享 SMTP">
+          </label>
+          <label>
+            <span>SMTP 端口</span>
+            <input id="smtp_port" type="text" placeholder="如 465 / 587">
+          </label>
+          <label>
+            <span>SMTP 是否启用 SSL</span>
+            <select id="smtp_use_ssl">
+              <option value="">跟随系统默认</option>
+              <option value="true">是</option>
+              <option value="false">否</option>
+            </select>
+          </label>
+          <label>
+            <span>发件邮箱</span>
+            <input id="sender_email" type="text" placeholder="留空则使用系统共享发件邮箱">
+          </label>
+          <label>
+            <span>发件授权码 / SMTP 密码</span>
+            <input id="sender_password" type="password" placeholder="留空则使用系统共享授权码">
+          </label>
+          <div style="padding-top:30px;color:var(--muted);font-size:13px;line-height:1.8;">
+            如果这个用户不需要单独指定发件人，请保持以上字段为空，系统会继续沿用共享 SMTP。
+          </div>
+        </div>
+
+        <div class="chip-panel">
+          <div class="section-title">
+            <div>
+              <small>步骤 3</small>
+              <h2>主分类</h2>
+            </div>
+          </div>
+          <div id="category-grid" class="chip-grid"></div>
+        </div>
+
+        <div class="chip-panel">
+          <div class="section-title">
+            <div>
+              <small>步骤 4</small>
+              <h2>子分类</h2>
+            </div>
+          </div>
+          <div id="subcategory-grid" class="chip-grid"></div>
+        </div>
+
+        <div class="section-title" style="margin-top: 26px;">
+          <div>
+            <small>步骤 5</small>
+            <h2>关键词与条数</h2>
+          </div>
+        </div>
+        <div class="field-grid">
+          <label>
+            <span>包含关键词</span>
+            <textarea id="include_keywords" placeholder="基金, 基金TA, ETF, 中国结算, 民生"></textarea>
+          </label>
+          <label>
+            <span>排除关键词</span>
+            <textarea id="exclude_keywords" placeholder="海外, 加密货币"></textarea>
+          </label>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-head">
+            <div>
+              <div style="color:#d9e4f2;">最多新闻条数</div>
+              <div style="margin-top:6px;color:var(--muted);font-size:13px;">建议 18 到 24 条，兼顾覆盖面和邮件可读性。</div>
+            </div>
+            <strong id="max_items_value">24</strong>
+          </div>
+          <input id="max_items" type="range" min="6" max="40" step="1" value="24">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="preview-head">
+          <div>
+            <div class="eyebrow">实时输出</div>
+            <h2 style="margin:14px 0 0;font-family:'Palatino Linotype','Book Antiqua','STSong',serif;">可直接写入的 users.json</h2>
+          </div>
+          <div class="button-row">
+            <button id="copy-btn" class="secondary" type="button">复制 JSON</button>
+            <button id="download-btn" class="primary" type="button">下载文件</button>
+            <button id="test-send-btn" class="secondary" type="button">一键测试预览</button>
+            <button id="send-now-btn" class="primary" type="button">一键正式发送</button>
+          </div>
+        </div>
+        <div id="build-version" class="workspace-hint" style="margin-top: 6px;">页面版本：正在检查...</div>
+        <div id="action-hint" class="workspace-hint" style="margin-top: 8px;">按钮可用性会根据服务状态和配置体检自动更新。</div>
+        <div id="summary-grid" class="summary-grid"></div>
+        <div id="validation-panel" class="validation-panel">
+          <div class="validation-title">配置体检</div>
+          <div class="validation-empty">正在检查当前配置...</div>
+        </div>
+
+        <pre><code id="json-output"></code></pre>
+        <div id="service-indicator" class="service-indicator offline">本地发送服务未连接。先双击 `start_web_control.bat`，再访问固定地址 http://127.0.0.1:8765/ 。</div>
+        <div id="result-panel" class="result-panel">
+          <div id="result-title" class="result-title">当前会话执行结果</div>
+          <div id="progress-box" class="progress-box hidden">
+            <div id="progress-title" class="progress-title">请求准备中...</div>
+            <div id="progress-subtitle" class="progress-subtitle">页面会在后台任务执行时持续显示预计进度。</div>
+            <div class="progress-bar">
+              <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
+          </div>
+          <div id="result-meta" class="result-meta hidden"></div>
+          <div id="preview-highlights" class="preview-highlights hidden">
+            <h3>预览命中新闻</h3>
+            <ul id="preview-highlight-list"></ul>
+          </div>
+          <div id="result-output" class="result-output">这里会显示测试预览或正式发送的详细日志。</div>
+        </div>
+
+        <div class="command-box">
+          <strong>测试预览</strong>
+          <code>python main.py --test --user-config users.json</code>
+        </div>
+        <div class="command-box">
+          <strong>正式发送</strong>
+          <code>python main.py --once --user-config users.json</code>
+        </div>
+        <div class="command-box">
+          <strong>当前收件人</strong>
+          <code id="recipient-preview">未填写</code>
+        </div>
+        <div class="tips">
+          生成后的文件请保存到 `news_email_system/users.json`。共享 SMTP 继续在 `news_email_system/config.py` 中维护。
+          <br>固定访问地址：`http://127.0.0.1:8765/`
+          <br>如果要用网页按钮直接触发预览或发送，请先双击同目录下的 `start_web_control.bat`。
+        </div>
+      </div>
+    </section>
+  </div>
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="section-title" style="margin-bottom: 12px;">
+        <div>
+          <small>正式发送前确认</small>
+          <h2>请确认本次发送摘要</h2>
+        </div>
+      </div>
+      <div id="confirm-summary" class="result-output">这里会展示当前发送摘要。</div>
+      <div class="button-row modal-actions">
+        <button id="confirm-cancel-btn" class="secondary" type="button">取消</button>
+        <button id="confirm-send-btn" class="primary" type="button">确认正式发送</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONTROL_BASE_URL = "http://127.0.0.1:8765";
+    const STORAGE_KEY = "news_email_system.team_configurator.v3";
+    const CATEGORY_OPTIONS = ["行业新闻", "金融新闻", "时政新闻"];
+    const SUBCATEGORY_OPTIONS = [
+      "基金TA", "证券", "基金", "A股", "港股", "行情", "宏观经济",
+      "利率", "汇率", "民生", "社会", "国务院", "发改委", "央行", "财政部", "证监会", "人大"
+    ];
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+    const PRESETS = [
+      {
+        key: "team-daily-digest",
+        summary: "适合大多数团队，覆盖行业、金融、时政三大类。",
+        audience: "投研、产品、市场协同团队",
+        user_id: "team-daily-digest",
+        name: "团队通用晨报",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队晨报】",
+        send_time: "08:00",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["行业新闻", "金融新闻", "时政新闻"],
+          subcategories: [...SUBCATEGORY_OPTIONS],
+          include_keywords: ["基金", "基金TA", "登记结算", "清算交收", "基金销售", "公募基金", "ETF", "中国结算", "基金业协会", "民生", "社会"],
+          exclude_keywords: [],
+          max_items: 24,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      },
+      {
+        key: "team-macro-watch",
+        summary: "偏宏观、政策与利率汇率，适合策略研判。",
+        audience: "宏观策略、资产配置团队",
+        user_id: "team-macro-watch",
+        name: "团队宏观版",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["macro-team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队宏观晨报】",
+        send_time: "08:15",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["金融新闻", "时政新闻"],
+          subcategories: ["民生", "社会", "国务院", "发改委", "央行", "财政部", "人大"],
+          include_keywords: ["民生", "社会", "高温", "医疗", "教育", "出行"],
+          exclude_keywords: [],
+          max_items: 18,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      },
+      {
+        key: "team-market-focus",
+        summary: "偏 ETF、券商、A 股和港股交易线索。",
+        audience: "市场交易、渠道、基金销售团队",
+        user_id: "team-market-focus",
+        name: "团队市场交易版",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["market-team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队市场晨报】",
+        send_time: "08:30",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["行业新闻", "金融新闻"],
+          subcategories: ["基金TA", "基金", "宏观经济", "民生", "社会"],
+          include_keywords: ["基金TA", "销售机构", "ETF", "基金销售", "登记结算", "民生"],
+          exclude_keywords: [],
+          max_items: 20,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      }
+    ];
+
+    const refs = {
+      status: document.getElementById("status"),
+      templateGrid: document.getElementById("template-grid"),
+      userList: document.getElementById("user-list"),
+      importBtn: document.getElementById("import-btn"),
+      importFile: document.getElementById("import-file"),
+      addUserBtn: document.getElementById("add-user-btn"),
+      duplicateUserBtn: document.getElementById("duplicate-user-btn"),
+      deleteUserBtn: document.getElementById("delete-user-btn"),
+      clearDraftBtn: document.getElementById("clear-draft-btn"),
+      draftIndicator: document.getElementById("draft-indicator"),
+      categoryGrid: document.getElementById("category-grid"),
+      subcategoryGrid: document.getElementById("subcategory-grid"),
+      summaryGrid: document.getElementById("summary-grid"),
+      validationPanel: document.getElementById("validation-panel"),
+      jsonOutput: document.getElementById("json-output"),
+      recipientPreview: document.getElementById("recipient-preview"),
+      serviceIndicator: document.getElementById("service-indicator"),
+      buildVersion: document.getElementById("build-version"),
+      actionHint: document.getElementById("action-hint"),
+      resultPanel: document.getElementById("result-panel"),
+      resultTitle: document.getElementById("result-title"),
+      resultMeta: document.getElementById("result-meta"),
+      resultOutput: document.getElementById("result-output"),
+      progressBox: document.getElementById("progress-box"),
+      progressTitle: document.getElementById("progress-title"),
+      progressSubtitle: document.getElementById("progress-subtitle"),
+      progressBarFill: document.getElementById("progress-bar-fill"),
+      previewHighlights: document.getElementById("preview-highlights"),
+      previewHighlightList: document.getElementById("preview-highlight-list"),
+      maxItems: document.getElementById("max_items"),
+      maxItemsValue: document.getElementById("max_items_value"),
+      copyBtn: document.getElementById("copy-btn"),
+      downloadBtn: document.getElementById("download-btn"),
+      testSendBtn: document.getElementById("test-send-btn"),
+      sendNowBtn: document.getElementById("send-now-btn"),
+      senderModeShared: document.getElementById("sender-mode-shared"),
+      senderModeCustom: document.getElementById("sender-mode-custom"),
+      customSmtpFields: document.getElementById("custom-smtp-fields"),
+      confirmModal: document.getElementById("confirm-modal"),
+      confirmSummary: document.getElementById("confirm-summary"),
+      confirmCancelBtn: document.getElementById("confirm-cancel-btn"),
+      confirmSendBtn: document.getElementById("confirm-send-btn"),
+      fields: {
+        user_id: document.getElementById("user_id"),
+        name: document.getElementById("name"),
+        recipient_emails: document.getElementById("recipient_emails"),
+        smtp_server: document.getElementById("smtp_server"),
+        smtp_port: document.getElementById("smtp_port"),
+        smtp_use_ssl: document.getElementById("smtp_use_ssl"),
+        sender_email: document.getElementById("sender_email"),
+        sender_password: document.getElementById("sender_password"),
+        reply_to: document.getElementById("reply_to"),
+        subject_prefix: document.getElementById("subject_prefix"),
+        sender_name: document.getElementById("sender_name"),
+        send_time: document.getElementById("send_time"),
+        timezone: document.getElementById("timezone"),
+        include_keywords: document.getElementById("include_keywords"),
+        exclude_keywords: document.getElementById("exclude_keywords")
+      }
+    };
+
+    let workspaceUsers = [];
+    let currentUserIndex = 0;
+    let currentConfig = null;
+    let currentPresetKey = "";
+    let senderMode = "shared";
+    let serviceOnline = false;
+    let draftSavedAt = "";
+    let confirmHandler = null;
+    let actionInProgress = false;
+    let progressTimer = null;
+    let progressStartedAt = 0;
+    let lastResultAt = "";
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function parseList(value) {
+      return String(value || "")
+        .split(/[\n,，、;]/)
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+
+    function isPlaceholderEmail(value) {
+      return /@example\.(com|org|net)$/i.test(String(value || "").trim());
+    }
+
+    function hasPlaceholderEmail(emails) {
+      return emails.some(email => isPlaceholderEmail(email));
+    }
+
+    function sanitizeList(values, allowedOptions) {
+      const source = Array.isArray(values) ? values : parseList(values);
+      const result = source
+        .map(item => String(item || "").trim())
+        .filter(Boolean);
+      if (!allowedOptions) {
+        return [...new Set(result)];
+      }
+      return [...new Set(result.filter(item => allowedOptions.includes(item)))];
+    }
+
+    function clamp(number, min, max) {
+      return Math.min(max, Math.max(min, number));
+    }
+
+    function normalizeUser(rawUser = {}) {
+      const explicitSenderMode = rawUser._sender_mode === "custom" || rawUser._sender_mode === "shared"
+        ? rawUser._sender_mode
+        : "";
+      const hasCustomSenderFields = Boolean(
+        rawUser.smtp_server ||
+        rawUser.smtp_port ||
+        rawUser.smtp_use_ssl ||
+        rawUser.sender_email ||
+        rawUser.sender_password
+      );
+      const inferredSenderMode = explicitSenderMode || (hasCustomSenderFields ? "custom" : "shared");
+      const preferences = rawUser.preferences || {};
+      const normalized = {
+        user_id: String(rawUser.user_id || "").trim(),
+        name: String(rawUser.name || "").trim(),
+        _sender_mode: inferredSenderMode,
+        enabled: rawUser.enabled !== false,
+        smtp_server: String(rawUser.smtp_server || "").trim(),
+        smtp_port: rawUser.smtp_port === null || rawUser.smtp_port === undefined ? "" : String(rawUser.smtp_port).trim(),
+        smtp_use_ssl: rawUser.smtp_use_ssl === null || rawUser.smtp_use_ssl === undefined ? "" : String(rawUser.smtp_use_ssl).trim(),
+        sender_email: String(rawUser.sender_email || "").trim(),
+        sender_password: String(rawUser.sender_password || "").trim(),
+        sender_name: String(rawUser.sender_name || "新闻推送助手").trim() || "新闻推送助手",
+        reply_to: String(rawUser.reply_to || "").trim(),
+        subject_prefix: String(rawUser.subject_prefix || "【广发基金视角晨报】").trim() || "【广发基金视角晨报】",
+        send_time: String(rawUser.send_time || "08:00").trim() || "08:00",
+        timezone: String(rawUser.timezone || "Asia/Shanghai").trim() || "Asia/Shanghai",
+        recipient_emails: sanitizeList(rawUser.recipient_emails),
+        preferences: {
+          categories: sanitizeList(preferences.categories, CATEGORY_OPTIONS),
+          subcategories: sanitizeList(preferences.subcategories, SUBCATEGORY_OPTIONS),
+          include_keywords: sanitizeList(preferences.include_keywords),
+          exclude_keywords: sanitizeList(preferences.exclude_keywords),
+          max_items: clamp(Number(preferences.max_items || 24), 6, 40),
+          min_relevance_score: Number(preferences.min_relevance_score || 0),
+          send_empty_email: Boolean(preferences.send_empty_email)
+        }
+      };
+
+      if (!normalized.user_id) {
+        normalized.user_id = `user-${Date.now()}`;
+      }
+      if (!normalized.name) {
+        normalized.name = "未命名用户";
+      }
+      if (!normalized.preferences.categories.length) {
+        normalized.preferences.categories = ["行业新闻", "金融新闻", "时政新闻"];
+      }
+      return normalized;
+    }
+
+    function exportUser(user) {
+      const normalized = normalizeUser(user);
+      return {
+        user_id: normalized.user_id,
+        name: normalized.name,
+        enabled: normalized.enabled,
+        smtp_server: normalized.smtp_server,
+        smtp_port: normalized.smtp_port === "" ? null : Number(normalized.smtp_port),
+        smtp_use_ssl: normalized.smtp_use_ssl === "" ? null : normalized.smtp_use_ssl === "true"
+        ,
+        sender_email: normalized.sender_email,
+        sender_password: normalized.sender_password,
+        recipient_emails: normalized.recipient_emails,
+        sender_name: normalized.sender_name,
+        reply_to: normalized.reply_to,
+        subject_prefix: normalized.subject_prefix,
+        send_time: normalized.send_time,
+        timezone: normalized.timezone,
+        preferences: normalized.preferences
+      };
+    }
+
+    function buildJson() {
+      syncCurrentUserIntoWorkspace();
+      return JSON.stringify({ users: workspaceUsers.map(exportUser) }, null, 2);
+    }
+
+    function buildRequestPayload() {
+      return exportUser(currentConfig);
+    }
+
+    function updateStatus(text, success = false) {
+      refs.status.textContent = text;
+      refs.status.style.borderColor = success ? "rgba(52, 211, 153, 0.28)" : "rgba(251, 191, 36, 0.22)";
+      refs.status.style.background = success ? "rgba(52, 211, 153, 0.12)" : "rgba(251, 191, 36, 0.1)";
+      refs.status.style.color = success ? "#ddfff3" : "#fff4cf";
+    }
+
+    function setResultTitle(text) {
+      refs.resultTitle.textContent = text || "当前会话执行结果";
+    }
+
+    function setResultOutput(text, variant = "") {
+      refs.resultPanel.className = "result-panel" + (variant ? ` ${variant}` : "");
+      refs.resultOutput.textContent = text || "当前会话还没有执行记录。执行测试预览或正式发送后，这里会展示详细日志。";
+    }
+
+    function setResultMeta(items = []) {
+      if (!items.length) {
+        refs.resultMeta.innerHTML = "";
+        refs.resultMeta.classList.add("hidden");
+        return;
+      }
+      refs.resultMeta.innerHTML = items.map(item => `
+        <div class="result-chip">
+          <div class="result-chip-label">${item.label}</div>
+          <div class="result-chip-value">${item.value}</div>
+        </div>
+      `).join("");
+      refs.resultMeta.classList.remove("hidden");
+    }
+
+    function setPreviewHighlights(items = []) {
+      if (!items.length) {
+        refs.previewHighlightList.innerHTML = "";
+        refs.previewHighlights.classList.add("hidden");
+        return;
+      }
+      refs.previewHighlightList.innerHTML = items.map(item => `<li>${item}</li>`).join("");
+      refs.previewHighlights.classList.remove("hidden");
+    }
+
+    function resetResultInsights() {
+      setResultMeta([]);
+      setPreviewHighlights([]);
+    }
+
+    function formatDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0) {
+        return "未返回";
+      }
+      if (seconds < 60) {
+        return `${seconds.toFixed(1)} 秒`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remain = Math.round(seconds % 60);
+      return `${minutes} 分 ${remain} 秒`;
+    }
+
+    function formatElapsed(seconds) {
+      const safe = Math.max(0, Math.floor(seconds));
+      const minutes = Math.floor(safe / 60);
+      const remain = safe % 60;
+      return `${minutes}:${String(remain).padStart(2, "0")}`;
+    }
+
+    function formatTimestamp(timestamp = "") {
+      if (!timestamp) {
+        return "未记录";
+      }
+      return timestamp;
+    }
+
+    function parseExecutionOutput(output = "") {
+      const text = String(output || "");
+      const lines = text.split(/\r?\n/);
+      const totalMatch = text.match(/共抓取\s+(\d+)\s+条新闻/);
+      const matchedMatch = text.match(/命中新闻数:\s*(\d+)/);
+      const userMatch = text.match(/用户:\s*(.+?)\s*\((.+?)\)/);
+      const recipientMatch = text.match(/收件人:\s*(.+)/);
+      const stageLines = lines.filter(line => /步骤\s+\d+\/\d+:\s*/.test(line));
+      const lastStageLine = stageLines.length ? stageLines[stageLines.length - 1] : "";
+      const stageMatch = lastStageLine.match(/步骤\s+\d+\/\d+:\s*(.+?)(?:\.\.\.|$)/);
+      const titles = lines
+        .filter(line => /^\s*\d+\.\s+\[.+?\]\s+.+/.test(line))
+        .slice(0, 8)
+        .map(line => line.replace(/^\s*\d+\.\s+/, "").trim());
+
+      return {
+        totalFetched: totalMatch ? Number(totalMatch[1]) : null,
+        matchedCount: matchedMatch ? Number(matchedMatch[1]) : null,
+        userName: userMatch ? userMatch[1].trim() : currentConfig.name,
+        userId: userMatch ? userMatch[2].trim() : currentConfig.user_id,
+        recipients: recipientMatch ? recipientMatch[1].trim() : (currentConfig.recipient_emails.join(", ") || "未填写"),
+        stage: stageMatch ? stageMatch[1].trim() : "",
+        titles
+      };
+    }
+
+    function renderExecutionInsights(result, variant) {
+      const parsed = parseExecutionOutput(result.output || "");
+      const resultModeLabel = (result.send_mode || "") === "send" ? "正式发送" : "测试预览";
+      const metaItems = [
+        { label: "执行结果", value: result.message || (variant === "success" ? "执行成功" : "执行失败") },
+        { label: "结果时间", value: formatTimestamp(lastResultAt) },
+        { label: "实际耗时", value: formatDuration(Number(result.duration_seconds)) },
+        { label: "当前用户", value: `${parsed.userName}\n${parsed.userId}` },
+        { label: "本次收件人", value: parsed.recipients }
+      ];
+
+      const stageValue = result.stage || parsed.stage;
+      if (stageValue) {
+        metaItems.push({ label: "最后阶段", value: stageValue });
+      }
+
+      if (parsed.totalFetched !== null) {
+        metaItems.push({ label: "抓取新闻总数", value: `${parsed.totalFetched} 条` });
+      }
+      if (parsed.matchedCount !== null) {
+        metaItems.push({ label: "预览命中条数", value: `${parsed.matchedCount} 条` });
+      } else if (currentConfig.preferences.max_items) {
+        metaItems.push({ label: "配置条数上限", value: `${currentConfig.preferences.max_items} 条` });
+      }
+
+      setResultMeta(metaItems);
+      setResultTitle(`${resultModeLabel}结果${variant === "success" ? "" : "（失败）"}`);
+      if ((result.send_mode || "") === "preview" && variant === "success") {
+        setPreviewHighlights(parsed.titles);
+      } else {
+        setPreviewHighlights([]);
+      }
+    }
+
+    function stopProgressFeedback() {
+      if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+      }
+      progressStartedAt = 0;
+      refs.progressBox.classList.add("hidden");
+      refs.progressBarFill.style.width = "0%";
+    }
+
+    function startProgressFeedback(modeLabel) {
+      stopProgressFeedback();
+      progressStartedAt = Date.now();
+      refs.progressBox.classList.remove("hidden");
+
+      const updateProgress = () => {
+        const elapsedSeconds = Math.floor((Date.now() - progressStartedAt) / 1000);
+        let stepText = "正在初始化请求并写入临时配置";
+        let percent = 8;
+        if (elapsedSeconds >= 20 && elapsedSeconds < 70) {
+          stepText = "正在抓取多来源新闻，这一步通常最耗时";
+          percent = 38;
+        } else if (elapsedSeconds >= 70 && elapsedSeconds < 100) {
+          stepText = "正在做分类、摘要与用户偏好筛选";
+          percent = 72;
+        } else if (elapsedSeconds >= 100) {
+          stepText = "正在整理结果并返回页面，请再等一下";
+          percent = 92;
+        }
+
+        refs.progressTitle.textContent = `${modeLabel}进行中`;
+        refs.progressSubtitle.textContent = [
+          `当前阶段：${stepText}`,
+          `已等待：${formatElapsed(elapsedSeconds)}`,
+          "通常需要 1 到 3 分钟；新闻源越多，等待时间越长。"
+        ].join("\n");
+        refs.progressBarFill.style.width = `${percent}%`;
+      };
+
+      updateProgress();
+      progressTimer = setInterval(updateProgress, 1000);
+    }
+
+    function inferPresetKey(user) {
+      const preset = PRESETS.find(item =>
+        item.user_id === user.user_id ||
+        item.name === user.name ||
+        item.subject_prefix === user.subject_prefix
+      );
+      return preset ? preset.key : "";
+    }
+
+    function getSenderModeFor(user = currentConfig) {
+      if (user && (user._sender_mode === "custom" || user._sender_mode === "shared")) {
+        return user._sender_mode;
+      }
+      const hasCustomSender = Boolean(
+        user.smtp_server ||
+        user.smtp_port ||
+        user.smtp_use_ssl ||
+        user.sender_email ||
+        user.sender_password
+      );
+      return hasCustomSender ? "custom" : "shared";
+    }
+
+    function inferSenderMode(user = currentConfig) {
+      senderMode = getSenderModeFor(user);
+      return senderMode;
+    }
+
+    function applySenderModeUI() {
+      const sharedActive = senderMode === "shared";
+      refs.senderModeShared.classList.toggle("active", sharedActive);
+      refs.senderModeCustom.classList.toggle("active", !sharedActive);
+      refs.customSmtpFields.classList.toggle("hidden", sharedActive);
+    }
+
+    function clearCustomSenderFields() {
+      currentConfig.smtp_server = "";
+      currentConfig.smtp_port = "";
+      currentConfig.smtp_use_ssl = "";
+      currentConfig.sender_email = "";
+      currentConfig.sender_password = "";
+    }
+
+    function syncCurrentUserIntoWorkspace() {
+      if (!currentConfig || !workspaceUsers.length) {
+        return;
+      }
+      workspaceUsers[currentUserIndex] = normalizeUser(currentConfig);
+      currentConfig = clone(workspaceUsers[currentUserIndex]);
+    }
+
+    function updateDraftIndicator(message) {
+      refs.draftIndicator.textContent = message;
+    }
+
+    function saveDraft() {
+      try {
+        syncCurrentUserIntoWorkspace();
+        draftSavedAt = new Date().toLocaleString("zh-CN");
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            users: workspaceUsers.map(exportUser),
+            currentUserIndex,
+            draftSavedAt
+          })
+        );
+        updateDraftIndicator(`草稿已自动保存到当前浏览器。最近保存时间：${draftSavedAt}`);
+      } catch (error) {
+        updateDraftIndicator("当前浏览器不支持草稿保存，请及时下载 users.json。");
+      }
+    }
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          return false;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.users) || !parsed.users.length) {
+          return false;
+        }
+        workspaceUsers = parsed.users.map(normalizeUser);
+        currentUserIndex = clamp(Number(parsed.currentUserIndex || 0), 0, workspaceUsers.length - 1);
+        currentConfig = clone(workspaceUsers[currentUserIndex]);
+        currentPresetKey = inferPresetKey(currentConfig);
+        draftSavedAt = parsed.draftSavedAt || "";
+        updateDraftIndicator(draftSavedAt ? `已恢复浏览器草稿。最近保存时间：${draftSavedAt}` : "已恢复浏览器草稿。");
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function initializeWorkspace() {
+      if (!loadDraft()) {
+        workspaceUsers = [normalizeUser(PRESETS[0])];
+        currentUserIndex = 0;
+        currentConfig = clone(workspaceUsers[0]);
+        currentPresetKey = PRESETS[0].key;
+        updateDraftIndicator("草稿会自动保存在当前浏览器。");
+      }
+    }
+
+    function renderTemplateCards() {
+      refs.templateGrid.innerHTML = "";
+      PRESETS.forEach(preset => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "template-card" + (preset.key === currentPresetKey ? " active" : "");
+        card.innerHTML = `
+          <h3>${preset.name}</h3>
+          <p>${preset.summary}</p>
+          <span class="tag">${preset.audience}</span>
+        `;
+        card.addEventListener("click", () => {
+          currentPresetKey = preset.key;
+          currentConfig = normalizeUser(preset);
+          syncFields();
+          renderAll();
+          updateStatus(`已将当前用户切换为「${preset.name}」模板。`);
+        });
+        refs.templateGrid.appendChild(card);
+      });
+    }
+
+    function renderUserList() {
+      refs.userList.innerHTML = "";
+      workspaceUsers.forEach((user, index) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "user-card" + (index === currentUserIndex ? " active" : "");
+        const modeLabel = getSenderModeFor(user) === "custom" ? "个人 SMTP" : "共享 SMTP";
+        card.innerHTML = `
+          <div class="user-card-top">
+            <div>
+              <h3>${user.name}</h3>
+              <small>${user.user_id}</small>
+            </div>
+            <span class="badge">${index === currentUserIndex ? "当前编辑中" : "点击切换"}</span>
+          </div>
+          <div style="color:#dbeafe;font-size:13px;line-height:1.7;">${user.recipient_emails.join(", ") || "未填写收件人"}</div>
+          <div class="user-meta">
+            <span class="badge">${modeLabel}</span>
+            <span class="badge">${user.send_time}</span>
+            <span class="badge">${user.preferences.max_items} 条上限</span>
+          </div>
+        `;
+        card.addEventListener("click", () => {
+          syncCurrentUserIntoWorkspace();
+          currentUserIndex = index;
+          currentConfig = clone(workspaceUsers[currentUserIndex]);
+          currentPresetKey = inferPresetKey(currentConfig);
+          renderAll();
+          updateStatus(`已切换到用户「${currentConfig.name}」。`, true);
+        });
+        refs.userList.appendChild(card);
+      });
+    }
+
+    function renderChips(container, options, selectedValues, onClick) {
+      container.innerHTML = "";
+      options.forEach(option => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip" + (selectedValues.includes(option) ? " active" : "");
+        chip.textContent = option;
+        chip.addEventListener("click", () => onClick(option));
+        container.appendChild(chip);
+      });
+    }
+
+    function syncFields() {
+      refs.fields.user_id.value = currentConfig.user_id;
+      refs.fields.name.value = currentConfig.name;
+      refs.fields.recipient_emails.value = currentConfig.recipient_emails.join(", ");
+      refs.fields.smtp_server.value = currentConfig.smtp_server || "";
+      refs.fields.smtp_port.value = currentConfig.smtp_port || "";
+      refs.fields.smtp_use_ssl.value = currentConfig.smtp_use_ssl ?? "";
+      refs.fields.sender_email.value = currentConfig.sender_email || "";
+      refs.fields.sender_password.value = currentConfig.sender_password || "";
+      refs.fields.reply_to.value = currentConfig.reply_to;
+      refs.fields.subject_prefix.value = currentConfig.subject_prefix;
+      refs.fields.sender_name.value = currentConfig.sender_name;
+      refs.fields.send_time.value = currentConfig.send_time;
+      refs.fields.timezone.value = currentConfig.timezone;
+      refs.fields.include_keywords.value = currentConfig.preferences.include_keywords.join(", ");
+      refs.fields.exclude_keywords.value = currentConfig.preferences.exclude_keywords.join(", ");
+      refs.maxItems.value = currentConfig.preferences.max_items;
+      refs.maxItemsValue.textContent = currentConfig.preferences.max_items;
+    }
+
+    function getValidationState(forAction = "preview") {
+      const issues = [];
+      const fieldState = {};
+      const currentMode = getSenderModeFor(currentConfig);
+
+      function pushIssue(field, message, level = "error") {
+        issues.push({ field, message, level });
+        fieldState[field] = level;
+      }
+
+      if (!currentConfig.user_id) pushIssue("user_id", "请填写 user_id。");
+      if (!currentConfig.name) pushIssue("name", "请填写团队名称。");
+      if (!currentConfig.subject_prefix) pushIssue("subject_prefix", "请填写标题前缀。");
+      if (!currentConfig.sender_name) pushIssue("sender_name", "请填写发送人显示名。");
+      if (!currentConfig.send_time || !TIME_RE.test(currentConfig.send_time)) pushIssue("send_time", "发送时间格式应为 HH:MM，例如 08:00。");
+      if (!currentConfig.timezone) pushIssue("timezone", "请填写时区，例如 Asia/Shanghai。");
+      if (!currentConfig.recipient_emails.length) {
+        pushIssue("recipient_emails", "请至少填写一个收件人。");
+      } else {
+        const invalidRecipients = currentConfig.recipient_emails.filter(email => !EMAIL_RE.test(email));
+        if (invalidRecipients.length) {
+          pushIssue("recipient_emails", `以下收件人格式不正确：${invalidRecipients.join("、")}`);
+        }
+      }
+      if (currentConfig.reply_to && !EMAIL_RE.test(currentConfig.reply_to)) {
+        pushIssue("reply_to", "Reply-To 邮箱格式不正确。");
+      }
+      if (!currentConfig.preferences.categories.length) pushIssue("include_keywords", "请至少选择一个主分类。");
+
+      if (currentMode === "custom") {
+        if (!currentConfig.smtp_server) pushIssue("smtp_server", "个人发件模式需要填写 SMTP 服务器。");
+        if (!currentConfig.smtp_port || Number.isNaN(Number(currentConfig.smtp_port))) pushIssue("smtp_port", "个人发件模式需要填写正确的 SMTP 端口。");
+        if (!currentConfig.sender_email || !EMAIL_RE.test(currentConfig.sender_email)) pushIssue("sender_email", "请填写正确的个人发件邮箱。");
+        if (!currentConfig.sender_password) pushIssue("sender_password", "请填写发件授权码或 SMTP 密码。");
+      }
+
+      if (hasPlaceholderEmail(currentConfig.recipient_emails)) {
+        const level = forAction === "send" ? "error" : "warning";
+        pushIssue("recipient_emails", "收件人中仍包含模板占位邮箱，正式发送前必须替换成真实邮箱。", level);
+      }
+
+      return {
+        issues,
+        fieldState,
+        ok: !issues.some(issue => issue.level === "error")
+      };
+    }
+
+    function applyFieldState(fieldState) {
+      Object.entries(refs.fields).forEach(([key, element]) => {
+        element.classList.remove("invalid", "warning");
+        if (fieldState[key] === "error") {
+          element.classList.add("invalid");
+        } else if (fieldState[key] === "warning") {
+          element.classList.add("warning");
+        }
+      });
+    }
+
+    function renderValidationPanel() {
+      const previewState = getValidationState("preview");
+      const sendState = getValidationState("send");
+      applyFieldState(sendState.fieldState);
+
+      if (!sendState.issues.length) {
+        refs.validationPanel.className = "validation-panel good";
+        refs.validationPanel.innerHTML = `
+          <div class="validation-title">配置体检</div>
+          <div class="validation-empty">当前配置检查通过，可以导出、预览，并在服务在线时直接正式发送。</div>
+        `;
+        return;
+      }
+
+      const hasError = sendState.issues.some(issue => issue.level === "error");
+      refs.validationPanel.className = "validation-panel " + (hasError ? "error" : "warn");
+      refs.validationPanel.innerHTML = `
+        <div class="validation-title">配置体检</div>
+        <ol class="validation-list">
+          ${sendState.issues.map(issue => `<li>${issue.message}</li>`).join("")}
+        </ol>
+      `;
+    }
+
+    function renderSummaryGrid() {
+      const currentMode = getSenderModeFor(currentConfig);
+      const summaryItems = [
+        ["当前编辑用户", `${currentConfig.name}\n${currentConfig.user_id}`],
+        ["工作区总用户数", `${workspaceUsers.length} 个用户`],
+        ["当前发件模式", currentMode === "custom" ? `个人 SMTP\n${currentConfig.sender_email || "待填写发件邮箱"}` : "共用系统 SMTP\n沿用系统共享发件账号"],
+        ["当前收件人", currentConfig.recipient_emails.length ? currentConfig.recipient_emails.join("\n") : "未填写"],
+        ["发送时间与时区", `${currentConfig.send_time}\n${currentConfig.timezone}`],
+        ["内容范围", `${currentConfig.preferences.categories.join(" / ")}\n最多 ${currentConfig.preferences.max_items} 条`]
+      ];
+      refs.summaryGrid.innerHTML = summaryItems.map(([label, value]) => `
+        <div class="summary-card">
+          <div class="summary-card-label">${label}</div>
+          <div class="summary-card-value">${value}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderActionHint() {
+      const previewState = getValidationState("preview");
+      const sendState = getValidationState("send");
+      if (actionInProgress) {
+        refs.actionHint.textContent = "后台任务执行中，按钮已临时锁定。你可以直接查看下方进度和执行日志。";
+        return;
+      }
+      if (!serviceOnline) {
+        refs.actionHint.textContent = "按钮暂不可用：本地发送服务未连接。先双击 start_web_control.bat，再访问固定地址。";
+        return;
+      }
+      if (!previewState.ok) {
+        refs.actionHint.textContent = `测试预览暂不可用：${previewState.issues[0]?.message || "请先修正当前配置。"}`;
+        return;
+      }
+      if (!sendState.ok) {
+        refs.actionHint.textContent = `正式发送暂不可用：${sendState.issues[0]?.message || "请先修正当前配置。"}`;
+        return;
+      }
+      refs.actionHint.textContent = "当前配置检查通过。服务在线时可直接执行测试预览或正式发送。";
+    }
+
+    function updateActionButtons() {
+      const previewState = getValidationState("preview");
+      const sendState = getValidationState("send");
+      refs.testSendBtn.disabled = actionInProgress || !serviceOnline || !previewState.ok;
+      refs.sendNowBtn.disabled = actionInProgress || !serviceOnline || !sendState.ok;
+      renderActionHint();
+    }
+
+    function renderPreview() {
+      currentConfig = normalizeUser(currentConfig);
+      senderMode = getSenderModeFor(currentConfig);
+      currentConfig._sender_mode = senderMode;
+      applySenderModeUI();
+      syncCurrentUserIntoWorkspace();
+      refs.jsonOutput.textContent = buildJson();
+      refs.recipientPreview.textContent = currentConfig.recipient_emails.length ? currentConfig.recipient_emails.join(", ") : "未填写";
+      refs.maxItemsValue.textContent = currentConfig.preferences.max_items;
+      renderSummaryGrid();
+      renderValidationPanel();
+      renderUserList();
+      updateActionButtons();
+      saveDraft();
+    }
+
+    function renderAll() {
+      currentConfig = normalizeUser(currentConfig);
+      inferSenderMode(currentConfig);
+      syncFields();
+      applySenderModeUI();
+      renderTemplateCards();
+      renderChips(refs.categoryGrid, CATEGORY_OPTIONS, currentConfig.preferences.categories, value => toggleValue(currentConfig.preferences.categories, value, CATEGORY_OPTIONS));
+      renderChips(refs.subcategoryGrid, SUBCATEGORY_OPTIONS, currentConfig.preferences.subcategories, value => toggleValue(currentConfig.preferences.subcategories, value, SUBCATEGORY_OPTIONS));
+      renderPreview();
+    }
+
+    function toggleValue(targetArray, value, allowedOptions) {
+      const index = targetArray.indexOf(value);
+      if (index >= 0) {
+        targetArray.splice(index, 1);
+      } else {
+        targetArray.push(value);
+      }
+      currentConfig.preferences.categories = currentConfig.preferences.categories.filter(item => CATEGORY_OPTIONS.includes(item));
+      currentConfig.preferences.subcategories = currentConfig.preferences.subcategories.filter(item => allowedOptions.includes(item));
+      renderAll();
+    }
+
+    function bindField(id, updater) {
+      refs.fields[id].addEventListener("input", event => {
+        updater(event.target.value);
+        renderPreview();
+      });
+    }
+
+    function setSenderMode(nextMode) {
+      senderMode = nextMode;
+      currentConfig._sender_mode = nextMode;
+      if (senderMode === "shared") {
+        clearCustomSenderFields();
+      }
+      applySenderModeUI();
+      renderPreview();
+    }
+
+    function createNewUser() {
+      const index = workspaceUsers.length + 1;
+      const source = PRESETS.find(item => item.key === currentPresetKey) || PRESETS[0];
+      return normalizeUser({
+        ...source,
+        user_id: `${source.user_id}-${index}`,
+        name: `${source.name} ${index}`,
+        recipient_emails: [],
+        reply_to: "",
+        sender_email: "",
+        sender_password: "",
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: ""
+      });
+    }
+
+    function addUser() {
+      syncCurrentUserIntoWorkspace();
+      const nextUser = createNewUser();
+      workspaceUsers.push(nextUser);
+      currentUserIndex = workspaceUsers.length - 1;
+      currentConfig = clone(nextUser);
+      currentPresetKey = inferPresetKey(currentConfig);
+      renderAll();
+      updateStatus(`已新增用户「${currentConfig.name}」。`, true);
+    }
+
+    function duplicateCurrentUser() {
+      syncCurrentUserIntoWorkspace();
+      const copy = normalizeUser({
+        ...currentConfig,
+        user_id: `${currentConfig.user_id}-copy`,
+        name: `${currentConfig.name} 副本`
+      });
+      workspaceUsers.splice(currentUserIndex + 1, 0, copy);
+      currentUserIndex += 1;
+      currentConfig = clone(copy);
+      currentPresetKey = inferPresetKey(currentConfig);
+      renderAll();
+      updateStatus(`已复制当前用户，生成「${currentConfig.name}」。`, true);
+    }
+
+    function deleteCurrentUser() {
+      if (workspaceUsers.length === 1) {
+        currentConfig = normalizeUser(PRESETS[0]);
+        workspaceUsers = [clone(currentConfig)];
+        currentUserIndex = 0;
+        currentPresetKey = PRESETS[0].key;
+        renderAll();
+        updateStatus("工作区只剩一个用户，已重置为默认模板。");
+        return;
+      }
+      const removedName = currentConfig.name;
+      workspaceUsers.splice(currentUserIndex, 1);
+      currentUserIndex = clamp(currentUserIndex, 0, workspaceUsers.length - 1);
+      currentConfig = clone(workspaceUsers[currentUserIndex]);
+      currentPresetKey = inferPresetKey(currentConfig);
+      renderAll();
+      updateStatus(`已删除用户「${removedName}」。`);
+    }
+
+    function importUsersFromJson(text) {
+      const parsed = JSON.parse(text);
+      if (!parsed || !Array.isArray(parsed.users) || !parsed.users.length) {
+        throw new Error("导入失败：文件中没有找到 users 数组。");
+      }
+      workspaceUsers = parsed.users.map(normalizeUser);
+      currentUserIndex = 0;
+      currentConfig = clone(workspaceUsers[0]);
+      currentPresetKey = inferPresetKey(currentConfig);
+      renderAll();
+      updateStatus(`已导入 ${workspaceUsers.length} 个用户配置。`, true);
+      setResultOutput(`导入成功：已读取 ${workspaceUsers.length} 个用户，可逐个切换编辑。`, "success");
+    }
+
+    function resetDraft() {
+      localStorage.removeItem(STORAGE_KEY);
+      workspaceUsers = [normalizeUser(PRESETS[0])];
+      currentUserIndex = 0;
+      currentConfig = clone(workspaceUsers[0]);
+      currentPresetKey = PRESETS[0].key;
+      renderAll();
+      updateStatus("已清空浏览器草稿并恢复默认模板。");
+      setResultOutput("已清空浏览器草稿。当前工作区已恢复为默认模板。", "");
+    }
+
+    function buildConfirmSummary() {
+      const currentMode = getSenderModeFor(currentConfig);
+      return [
+        `当前用户：${currentConfig.name} (${currentConfig.user_id})`,
+        `发件模式：${currentMode === "custom" ? "使用个人发件账号" : "共用系统发件账号"}`,
+        `发件信息：${currentMode === "custom" ? `${currentConfig.sender_email} / ${currentConfig.smtp_server}:${currentConfig.smtp_port}` : "沿用系统共享 SMTP"}`,
+        `收件人：${currentConfig.recipient_emails.join(", ") || "未填写"}`,
+        `发送时间：${currentConfig.send_time} (${currentConfig.timezone})`,
+        `主分类：${currentConfig.preferences.categories.join("、") || "未选择"}`,
+        `子分类：${currentConfig.preferences.subcategories.join("、") || "未选择"}`,
+        `包含关键词：${currentConfig.preferences.include_keywords.join("、") || "未填写"}`,
+        `最多新闻条数：${currentConfig.preferences.max_items}`
+      ].join("\n");
+    }
+
+    function openConfirmModal() {
+      refs.confirmSummary.textContent = buildConfirmSummary();
+      refs.confirmModal.classList.remove("hidden");
+    }
+
+    function closeConfirmModal() {
+      refs.confirmModal.classList.add("hidden");
+      confirmHandler = null;
+    }
+
+    async function checkServiceHealth() {
+      try {
+        const response = await fetch(`${CONTROL_BASE_URL}/api/health`);
+        const result = await response.json();
+        if (result.ok) {
+          serviceOnline = true;
+          refs.serviceIndicator.textContent = "本地发送服务已连接，可直接使用固定地址 http://127.0.0.1:8765/ ，也可以点击按钮执行测试预览或正式发送。";
+          refs.serviceIndicator.className = "service-indicator online";
+          refs.buildVersion.textContent = `页面连接服务版本：${result.build_version || "unknown"}`;
+          updateActionButtons();
+          return true;
+        }
+      } catch (error) {
+        // ignore
+      }
+
+      serviceOnline = false;
+      refs.serviceIndicator.textContent = "本地发送服务未连接。先双击 start_web_control.bat，再访问 http://127.0.0.1:8765/ 。";
+      refs.serviceIndicator.className = "service-indicator offline";
+      refs.buildVersion.textContent = "页面版本：未连接到本地服务";
+      updateActionButtons();
+      return false;
+    }
+
+    async function runRemoteAction(path, buttonRef, pendingText, successText, failurePrefix) {
+      const validation = getValidationState(path === "/api/send-now" ? "send" : "preview");
+      if (!validation.ok) {
+        updateStatus("当前配置未通过校验，请先修正标红字段。");
+        setResultOutput(validation.issues.map(item => `- ${item.message}`).join("\n"), "error");
+        renderValidationPanel();
+        return;
+      }
+
+      const serviceReady = await checkServiceHealth();
+      if (!serviceReady) {
+        updateStatus("本地发送服务还没启动，请先双击 start_web_control.bat。");
+        setResultOutput("本地发送服务未连接，请先启动 start_web_control.bat，再重新打开固定地址 http://127.0.0.1:8765/ 。", "error");
+        return;
+      }
+
+      actionInProgress = true;
+      updateActionButtons();
+      buttonRef.disabled = true;
+      buttonRef.textContent = pendingText;
+      updateStatus("正在调用本地 Python 服务处理请求，请稍候。");
+      setResultTitle(path === "/api/send-now" ? "正式发送结果（执行中）" : "测试预览结果（执行中）");
+      startProgressFeedback(path === "/api/send-now" ? "正式发送" : "测试预览");
+      resetResultInsights();
+      setResultOutput("请求已提交，正在等待后台执行结果...", "");
+
+      try {
+        const response = await fetch(`${CONTROL_BASE_URL}${path}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(buildRequestPayload())
+        });
+        const result = await response.json();
+        lastResultAt = new Date().toLocaleString("zh-CN");
+        stopProgressFeedback();
+        if (result.ok) {
+          updateStatus(successText, true);
+          renderExecutionInsights(result, "success");
+          setResultOutput(
+            [
+              result.message || "执行成功",
+              result.exit_code !== undefined ? `退出码: ${result.exit_code}` : "",
+              result.duration_seconds !== undefined ? `耗时: ${formatDuration(Number(result.duration_seconds))}` : "",
+              result.output ? `\n执行日志:\n${result.output}` : ""
+            ].filter(Boolean).join("\n"),
+            "success"
+          );
+        } else {
+          updateStatus(`${failurePrefix}：${result.message || "未知错误"}`);
+          renderExecutionInsights(result, "error");
+          setResultOutput(
+            [
+              result.message || "执行失败",
+              result.exit_code !== undefined ? `退出码: ${result.exit_code}` : "",
+              result.duration_seconds !== undefined ? `耗时: ${formatDuration(Number(result.duration_seconds))}` : "",
+              result.output ? `\n执行日志:\n${result.output}` : ""
+            ].filter(Boolean).join("\n"),
+            "error"
+          );
+        }
+      } catch (error) {
+        stopProgressFeedback();
+        resetResultInsights();
+        lastResultAt = new Date().toLocaleString("zh-CN");
+        setResultTitle("请求结果（失败）");
+        updateStatus("请求失败，请确认 start_web_control.bat 正在运行。");
+        setResultOutput(`请求失败：${error.message || error}`, "error");
+      } finally {
+        stopProgressFeedback();
+        actionInProgress = false;
+        buttonRef.disabled = false;
+        buttonRef.textContent = buttonRef === refs.testSendBtn ? "一键测试预览" : "一键正式发送";
+        await checkServiceHealth();
+        updateActionButtons();
+      }
+    }
+
+    bindField("user_id", value => {
+      currentConfig.user_id = value.trim();
+      currentPresetKey = inferPresetKey(currentConfig);
+    });
+    bindField("name", value => currentConfig.name = value.trim());
+    bindField("recipient_emails", value => currentConfig.recipient_emails = parseList(value));
+    bindField("smtp_server", value => {
+      currentConfig.smtp_server = value.trim();
+      currentConfig._sender_mode = "custom";
+      senderMode = "custom";
+      applySenderModeUI();
+    });
+    bindField("smtp_port", value => {
+      currentConfig.smtp_port = value.trim();
+      currentConfig._sender_mode = "custom";
+      senderMode = "custom";
+      applySenderModeUI();
+    });
+    bindField("sender_email", value => {
+      currentConfig.sender_email = value.trim();
+      currentConfig._sender_mode = "custom";
+      senderMode = "custom";
+      applySenderModeUI();
+    });
+    bindField("sender_password", value => {
+      currentConfig.sender_password = value.trim();
+      currentConfig._sender_mode = "custom";
+      senderMode = "custom";
+      applySenderModeUI();
+    });
+    bindField("reply_to", value => currentConfig.reply_to = value.trim());
+    bindField("subject_prefix", value => currentConfig.subject_prefix = value.trim());
+    bindField("sender_name", value => currentConfig.sender_name = value.trim());
+    bindField("send_time", value => currentConfig.send_time = value.trim());
+    bindField("timezone", value => currentConfig.timezone = value.trim());
+    bindField("include_keywords", value => currentConfig.preferences.include_keywords = parseList(value));
+    bindField("exclude_keywords", value => currentConfig.preferences.exclude_keywords = parseList(value));
+
+    refs.fields.smtp_use_ssl.addEventListener("change", event => {
+      currentConfig.smtp_use_ssl = event.target.value;
+      inferSenderMode();
+      applySenderModeUI();
+      renderPreview();
+    });
+
+    refs.senderModeShared.addEventListener("click", () => {
+      setSenderMode("shared");
+      updateStatus("已切换为共用系统发件账号模式。", true);
+    });
+
+    refs.senderModeCustom.addEventListener("click", () => {
+      setSenderMode("custom");
+      updateStatus("已切换为使用个人发件账号模式。", true);
+    });
+
+    refs.maxItems.addEventListener("input", event => {
+      currentConfig.preferences.max_items = Number(event.target.value);
+      renderPreview();
+    });
+
+    refs.copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(buildJson());
+        updateStatus("完整 users.json 已复制到剪贴板，可直接保存。", true);
+      } catch (error) {
+        updateStatus("复制失败，请手动复制右侧 JSON 内容。");
+      }
+    });
+
+    refs.downloadBtn.addEventListener("click", () => {
+      const blob = new Blob([buildJson()], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "users.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      updateStatus("已下载完整 users.json，可直接放入 news_email_system 目录。", true);
+    });
+
+    refs.importBtn.addEventListener("click", () => refs.importFile.click());
+    refs.importFile.addEventListener("change", async event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const text = await file.text();
+        importUsersFromJson(text);
+      } catch (error) {
+        updateStatus("导入失败，请确认文件是有效的 users.json。");
+        setResultOutput(`导入失败：${error.message || error}`, "error");
+      } finally {
+        event.target.value = "";
+      }
+    });
+
+    refs.addUserBtn.addEventListener("click", addUser);
+    refs.duplicateUserBtn.addEventListener("click", duplicateCurrentUser);
+    refs.deleteUserBtn.addEventListener("click", deleteCurrentUser);
+    refs.clearDraftBtn.addEventListener("click", resetDraft);
+
+    refs.testSendBtn.addEventListener("click", async () => {
+      await runRemoteAction(
+        "/api/test-preview",
+        refs.testSendBtn,
+        "预览中...",
+        "测试预览完成，结果已返回到页面。",
+        "测试预览失败"
+      );
+    });
+
+    refs.sendNowBtn.addEventListener("click", () => {
+      if (!getValidationState("send").ok) {
+        updateStatus("当前配置未通过校验，请先修正后再正式发送。");
+        renderValidationPanel();
+        return;
+      }
+      confirmHandler = async () => {
+        await runRemoteAction(
+          "/api/send-now",
+          refs.sendNowBtn,
+          "发送中...",
+          "正式发送成功，邮件已按当前网页配置发出。",
+          "正式发送失败"
+        );
+      };
+      openConfirmModal();
+    });
+
+    refs.confirmCancelBtn.addEventListener("click", closeConfirmModal);
+    refs.confirmModal.addEventListener("click", event => {
+      if (event.target === refs.confirmModal) {
+        closeConfirmModal();
+      }
+    });
+    refs.confirmSendBtn.addEventListener("click", async () => {
+      const action = confirmHandler;
+      closeConfirmModal();
+      if (action) {
+        await action();
+      }
+    });
+
+    initializeWorkspace();
+    checkServiceHealth();
+    renderAll();
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+  "users": [
+    {
+      "user_id": "team-daily-digest",
+      "name": "团队通用晨报",
+      "enabled": true,
+      "smtp_server": "",
+      "smtp_port": null,
+      "smtp_use_ssl": null,
+      "sender_email": "",
+      "sender_password": "",
+      "recipient_emails": [
+        "Hayden15317@163.com"
+      ],
+      "sender_name": "新闻推送助手",
+      "reply_to": "owner@example.com",
+      "subject_prefix": "【团队晨报】",
+      "send_time": "08:00",
+      "timezone": "Asia/Shanghai",
+      "preferences": {
+        "categories": [
+          "行业新闻",
+          "金融新闻",
+          "时政新闻"
+        ],
+        "subcategories": [
+          "基金TA",
+          "证券",
+          "基金",
+          "A股",
+          "港股",
+          "行情",
+          "宏观经济",
+          "利率",
+          "汇率",
+          "国务院",
+          "发改委",
+          "央行",
+          "财政部",
+          "证监会",
+          "人大",
+          "社会",
+          "民生"
+        ],
+        "include_keywords": [
+          "基金TA",
+          "登记结算",
+          "清算交收",
+          "基金销售",
+          "基金",
+          "ETF",
+          "中国人民银行",
+          "民生/社会/公共服务/政策信号"
+        ],
+        "exclude_keywords": [],
+        "max_items": 24,
+        "min_relevance_score": 0,
+        "send_empty_email": false
+      }
+    }
+  ]
+}

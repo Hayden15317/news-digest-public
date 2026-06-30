@@ -1,0 +1,18 @@
+# 自动生成的配置文件
+# 生成时间: 2026-06-22 11:26:36
+
+# 邮件服务器配置
+SMTP_SERVER = "smtp.163.com"
+SMTP_PORT = 465
+SMTP_USE_SSL = True
+
+# 发件人配置
+SENDER_EMAIL = "Hayden15317@163.com"
+SENDER_PASSWORD = "ZTUEqVguqkjnzJyg"
+SENDER_NAME = "新闻推送助手"
+
+# 收件人配置
+RECIPIENT_EMAILS = "Hayden15317@163.com".split(",")
+
+# 其他配置保持不变...
+from config import *

@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.1), transparent 22%),
+    linear-gradient(180deg, #020617 0%, #07111f 100%);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+  letter-spacing: 0.02em;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(12, 18, 31, 0.95);
+  background: linear-gradient(135deg, #67e8f9, #fbbf24);
+  box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.12);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(12, 18, 31, 0.95);
+  background: linear-gradient(135deg, #67e8f9, #fbbf24);
+  box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.12);
+}
+
+pre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+pre::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+}

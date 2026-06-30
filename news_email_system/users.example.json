@@ -1,0 +1,92 @@
+{
+  "users": [
+    {
+      "user_id": "research-team",
+      "name": "投研团队晨报",
+      "enabled": true,
+      "smtp_server": "",
+      "smtp_port": null,
+      "smtp_use_ssl": null,
+      "sender_email": "",
+      "sender_password": "",
+      "recipient_emails": [
+        "research@example.com"
+      ],
+      "sender_name": "新闻推送助手",
+      "reply_to": "research@example.com",
+      "subject_prefix": "【广发基金视角晨报】",
+      "send_time": "08:00",
+      "timezone": "Asia/Shanghai",
+      "preferences": {
+        "categories": [
+          "行业新闻",
+          "金融新闻",
+          "时政新闻"
+        ],
+        "subcategories": [
+          "证券",
+          "基金",
+          "A股",
+          "港股",
+          "宏观经济",
+          "利率",
+          "汇率",
+          "央行",
+          "财政部",
+          "证监会"
+        ],
+        "include_keywords": [
+          "基金",
+          "券商",
+          "ETF"
+        ],
+        "exclude_keywords": [],
+        "max_items": 24,
+        "min_relevance_score": 0,
+        "send_empty_email": false
+      }
+    },
+    {
+      "user_id": "macro-watch",
+      "name": "宏观观察版",
+      "enabled": true,
+      "smtp_server": "",
+      "smtp_port": null,
+      "smtp_use_ssl": null,
+      "sender_email": "",
+      "sender_password": "",
+      "recipient_emails": [
+        "macro@example.com"
+      ],
+      "sender_name": "新闻推送助手",
+      "reply_to": "",
+      "subject_prefix": "【宏观政策晨报】",
+      "send_time": "08:30",
+      "timezone": "Asia/Shanghai",
+      "preferences": {
+        "categories": [
+          "金融新闻",
+          "时政新闻"
+        ],
+        "subcategories": [
+          "宏观经济",
+          "利率",
+          "汇率",
+          "央行",
+          "财政部",
+          "证监会",
+          "人大"
+        ],
+        "include_keywords": [
+          "货币政策",
+          "利率",
+          "财政政策"
+        ],
+        "exclude_keywords": [],
+        "max_items": 18,
+        "min_relevance_score": 0,
+        "send_empty_email": false
+      }
+    }
+  ]
+}

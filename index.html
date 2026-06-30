@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新闻推送公网配置台</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #04101d;
+      --panel: rgba(8, 16, 31, 0.92);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #eef6ff;
+      --muted: #92a7c4;
+      --cyan: #67e8f9;
+      --gold: #fbbf24;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.14), transparent 24%),
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 20%),
+        linear-gradient(180deg, #020617 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 30px;
+      box-shadow: 0 24px 80px rgba(2, 6, 23, 0.55);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero:before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at top left, rgba(103, 232, 249, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 22%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      display: grid;
+      gap: 22px;
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: end;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(103, 232, 249, 0.24);
+      background: rgba(103, 232, 249, 0.08);
+      color: #dbfbff;
+      letter-spacing: 0.24em;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 0;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: 1.04;
+    }
+
+    h1 span {
+      display: block;
+      background: linear-gradient(120deg, #f8fafc, #67e8f9, #fbbf24);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      margin-top: 16px;
+      max-width: 780px;
+      color: #d6e2f2;
+      line-height: 1.9;
+      font-size: 17px;
+    }
+
+    .hero-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 18px;
+    }
+
+    .stat small {
+      display: block;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 24px;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+    }
+
+    .status {
+      position: relative;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(251, 191, 36, 0.24);
+      background: rgba(251, 191, 36, 0.08);
+      color: #fff4cf;
+    }
+
+    .layout {
+      display: grid;
+      gap: 26px;
+      grid-template-columns: 1.06fr 0.94fr;
+      margin-top: 28px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .section-head {
+      margin-bottom: 18px;
+    }
+
+    .section-head small {
+      display: block;
+      color: var(--muted);
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 28px;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+    }
+
+    .template-grid, .field-grid, .chip-grid, .button-row {
+      display: grid;
+      gap: 14px;
+    }
+
+    .template-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .template-card {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .template-card:hover { transform: translateY(-2px); }
+
+    .template-card.active {
+      border-color: rgba(103, 232, 249, 0.5);
+      background: rgba(103, 232, 249, 0.1);
+    }
+
+    .template-card h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .template-card p {
+      margin: 10px 0 0;
+      color: #cfd9e9;
+      line-height: 1.75;
+      font-size: 14px;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: #ffefbf;
+      font-size: 12px;
+    }
+
+    .field-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    label span {
+      display: block;
+      margin-bottom: 8px;
+      color: #dce6f4;
+      font-size: 14px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(2, 6, 23, 0.72);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.75;
+    }
+
+    .chip-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .chip-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      margin-top: 14px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #d4deec;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      border-color: rgba(103, 232, 249, 0.5);
+      background: rgba(103, 232, 249, 0.1);
+      color: #defbff;
+    }
+
+    .slider-wrap {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .slider-head strong {
+      font-size: 34px;
+      font-family: "Palatino Linotype", "Book Antiqua", "STSong", serif;
+    }
+
+    input[type="range"] {
+      margin-top: 18px;
+      appearance: none;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      border: 0;
+      padding: 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(2, 6, 23, 0.95);
+      background: linear-gradient(135deg, var(--cyan), var(--gold));
+      cursor: pointer;
+    }
+
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .button-row {
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      justify-content: start;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 11px 18px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .primary {
+      border-color: rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.14);
+      color: #fff2ca;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 620px;
+      overflow: auto;
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: #020617;
+      color: #e2f4ff;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .notice, .command-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .notice {
+      border-color: rgba(103, 232, 249, 0.22);
+      background: rgba(103, 232, 249, 0.08);
+      color: #ddfbff;
+      line-height: 1.85;
+    }
+
+    .command-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #dbeafe;
+    }
+
+    code {
+      display: block;
+      color: #b5f5ff;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.8;
+    }
+
+    .tips {
+      margin-top: 18px;
+      color: var(--muted);
+      line-height: 1.85;
+      font-size: 14px;
+    }
+
+    .sender-mode-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, 1fr);
+      margin-bottom: 16px;
+    }
+
+    .sender-mode-card {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sender-mode-card.active {
+      border-color: rgba(103, 232, 249, 0.5);
+      background: rgba(103, 232, 249, 0.1);
+      color: #defbff;
+    }
+
+    .sender-mode-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .sender-mode-card span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1180px) {
+      .hero-inner, .layout { grid-template-columns: 1fr; }
+      .template-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .page { padding: 16px; }
+      .hero, .panel { padding: 18px; }
+      .field-grid, .hero-grid { grid-template-columns: 1fr; }
+      .button-row { grid-auto-flow: row; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <div class="eyebrow">Public Config Studio</div>
+          <h1>真正公网可访问的<span>新闻推送配置台</span></h1>
+          <div class="subtitle">
+            这是公网安全版入口，专门负责生成团队配置文件。任何人都可以通过这个链接在线填写模板、导出 `users.json`，但不会暴露你的 SMTP 凭证，也不会在公网直接开放发信接口。
+          </div>
+        </div>
+        <div class="hero-grid">
+          <div class="stat"><small>访问方式</small><strong>公网链接</strong></div>
+          <div class="stat"><small>输出内容</small><strong>users.json</strong></div>
+          <div class="stat"><small>安全策略</small><strong>不暴露发信</strong></div>
+        </div>
+      </div>
+      <div id="status" class="status">当前是公网安全版：支持在线配置、复制和下载；正式发信仍建议走你本地或私有服务。</div>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="section-head">
+          <small>步骤 1</small>
+          <h2>选择团队模板</h2>
+        </div>
+        <div id="template-grid" class="template-grid"></div>
+
+        <div class="section-head" style="margin-top:26px;">
+          <small>步骤 2</small>
+          <h2>填写基础信息</h2>
+        </div>
+        <div class="field-grid">
+          <label><span>用户标识 user_id</span><input id="user_id" type="text"></label>
+          <label><span>团队名称</span><input id="name" type="text"></label>
+          <label><span>收件人</span><input id="recipient_emails" type="text" placeholder="多个邮箱用逗号分隔"></label>
+          <label><span>回复地址</span><input id="reply_to" type="text"></label>
+          <label><span>标题前缀</span><input id="subject_prefix" type="text"></label>
+          <label><span>发送人显示名</span><input id="sender_name" type="text"></label>
+          <label><span>发送时间</span><input id="send_time" type="text" placeholder="08:00"></label>
+          <label><span>时区</span><input id="timezone" type="text"></label>
+        </div>
+
+        <div class="section-head" style="margin-top:26px;">
+          <small>步骤 2A</small>
+          <h2>发件人配置</h2>
+        </div>
+        <div id="sender-mode-grid" class="sender-mode-grid">
+          <button id="sender-mode-shared" class="sender-mode-card active" type="button">
+            <strong>共用系统发件账号</strong>
+            <span>适合团队统一发信。导出的配置会继续沿用系统共享 SMTP。</span>
+          </button>
+          <button id="sender-mode-custom" class="sender-mode-card" type="button">
+            <strong>使用个人发件账号</strong>
+            <span>为这个用户单独配置 SMTP、发件邮箱和授权码。</span>
+          </button>
+        </div>
+        <div id="custom-smtp-fields" class="field-grid hidden">
+          <label><span>SMTP 服务器</span><input id="smtp_server" type="text" placeholder="如 smtp.qq.com"></label>
+          <label><span>SMTP 端口</span><input id="smtp_port" type="text" placeholder="如 465 / 587"></label>
+          <label>
+            <span>SMTP 是否启用 SSL</span>
+            <select id="smtp_use_ssl">
+              <option value="">跟随系统默认</option>
+              <option value="true">是</option>
+              <option value="false">否</option>
+            </select>
+          </label>
+          <label><span>发件邮箱</span><input id="sender_email" type="text" placeholder="如 yourname@example.com"></label>
+          <label><span>发件授权码 / SMTP 密码</span><input id="sender_password" type="password" placeholder="填写授权码或 SMTP 密码"></label>
+          <div style="padding-top:30px;color:var(--muted);font-size:13px;line-height:1.8;">
+            如果选择共用系统发件账号，以上字段会保持为空。
+          </div>
+        </div>
+
+        <div class="chip-panel">
+          <div class="section-head">
+            <small>步骤 3</small>
+            <h2>主分类</h2>
+          </div>
+          <div id="category-grid" class="chip-grid"></div>
+        </div>
+
+        <div class="chip-panel">
+          <div class="section-head">
+            <small>步骤 4</small>
+            <h2>子分类</h2>
+          </div>
+          <div id="subcategory-grid" class="chip-grid"></div>
+        </div>
+
+        <div class="section-head" style="margin-top:26px;">
+          <small>步骤 5</small>
+          <h2>关键词与条数</h2>
+        </div>
+        <div class="field-grid">
+          <label><span>包含关键词</span><textarea id="include_keywords" placeholder="基金, ETF, 券商"></textarea></label>
+          <label><span>排除关键词</span><textarea id="exclude_keywords" placeholder="海外, 加密货币"></textarea></label>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-head">
+            <div>
+              <div style="color:#d9e4f2;">最多新闻条数</div>
+              <div style="margin-top:6px;color:var(--muted);font-size:13px;">建议 18 到 24 条，兼顾覆盖面和可读性。</div>
+            </div>
+            <strong id="max_items_value">24</strong>
+          </div>
+          <input id="max_items" type="range" min="6" max="40" step="1" value="24">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="preview-head">
+          <div>
+            <div class="eyebrow">Live Output</div>
+            <h2 style="margin:14px 0 0;font-family:'Palatino Linotype','Book Antiqua','STSong',serif;">可直接写入的 users.json</h2>
+          </div>
+          <div class="button-row">
+            <button id="copy-btn" type="button">复制 JSON</button>
+            <button id="download-btn" class="primary" type="button">下载文件</button>
+          </div>
+        </div>
+
+        <pre><code id="json-output"></code></pre>
+
+        <div class="notice">
+          公网版不直接提供发信按钮，避免把共享邮箱 SMTP 和发信能力暴露给公网。生成配置后，你可以放回本地系统的 `news_email_system/users.json` 再执行发送。
+        </div>
+
+        <div class="command-box">
+          <strong>本地测试预览</strong>
+          <code>python main.py --test --user-config users.json</code>
+        </div>
+        <div class="command-box">
+          <strong>本地正式发送</strong>
+          <code>python main.py --once --user-config users.json</code>
+        </div>
+        <div class="command-box">
+          <strong>当前收件人</strong>
+          <code id="recipient-preview">未填写</code>
+        </div>
+        <div class="tips">
+          这套公网链接适合长期分享给团队使用；如果后续你要把“正式发送”也搬到公网，需要再加鉴权和安全隔离。
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const CATEGORY_OPTIONS = ["行业新闻", "金融新闻", "时政新闻"];
+    const SUBCATEGORY_OPTIONS = ["证券", "基金", "A股", "港股", "行情", "宏观经济", "利率", "汇率", "央行", "财政部", "证监会", "人大"];
+    const PRESETS = [
+      {
+        key: "team-daily-digest",
+        summary: "适合大多数团队，覆盖行业、金融、时政三大类。",
+        audience: "投研、产品、市场协同团队",
+        user_id: "team-daily-digest",
+        name: "团队通用晨报",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队晨报】",
+        send_time: "08:00",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["行业新闻", "金融新闻", "时政新闻"],
+          subcategories: [...SUBCATEGORY_OPTIONS],
+          include_keywords: ["基金", "ETF", "券商", "A股", "港股", "货币政策"],
+          exclude_keywords: [],
+          max_items: 24,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      },
+      {
+        key: "team-macro-watch",
+        summary: "偏宏观、政策与利率汇率，适合策略研判。",
+        audience: "宏观策略、资产配置团队",
+        user_id: "team-macro-watch",
+        name: "团队宏观版",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["macro-team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队宏观晨报】",
+        send_time: "08:15",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["金融新闻", "时政新闻"],
+          subcategories: ["宏观经济", "利率", "汇率", "央行", "财政部", "证监会", "人大"],
+          include_keywords: ["利率", "财政政策", "货币政策", "人民币"],
+          exclude_keywords: [],
+          max_items: 18,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      },
+      {
+        key: "team-market-focus",
+        summary: "偏 ETF、券商、A 股和港股交易线索。",
+        audience: "市场交易、渠道、基金销售团队",
+        user_id: "team-market-focus",
+        name: "团队市场交易版",
+        enabled: true,
+        smtp_server: "",
+        smtp_port: "",
+        smtp_use_ssl: "",
+        sender_email: "",
+        sender_password: "",
+        recipient_emails: ["market-team@example.com"],
+        sender_name: "新闻推送助手",
+        reply_to: "owner@example.com",
+        subject_prefix: "【团队市场晨报】",
+        send_time: "08:30",
+        timezone: "Asia/Shanghai",
+        preferences: {
+          categories: ["行业新闻", "金融新闻"],
+          subcategories: ["证券", "基金", "A股", "港股", "行情", "宏观经济"],
+          include_keywords: ["ETF", "券商", "资金", "成交", "A股", "港股"],
+          exclude_keywords: [],
+          max_items: 20,
+          min_relevance_score: 0,
+          send_empty_email: false
+        }
+      }
+    ];
+
+    let currentPresetKey = PRESETS[0].key;
+    let currentConfig = JSON.parse(JSON.stringify(PRESETS[0]));
+    let senderMode = "shared";
+
+    const refs = {
+      status: document.getElementById("status"),
+      templateGrid: document.getElementById("template-grid"),
+      categoryGrid: document.getElementById("category-grid"),
+      subcategoryGrid: document.getElementById("subcategory-grid"),
+      jsonOutput: document.getElementById("json-output"),
+      recipientPreview: document.getElementById("recipient-preview"),
+      maxItems: document.getElementById("max_items"),
+      maxItemsValue: document.getElementById("max_items_value"),
+      copyBtn: document.getElementById("copy-btn"),
+      downloadBtn: document.getElementById("download-btn"),
+      senderModeShared: document.getElementById("sender-mode-shared"),
+      senderModeCustom: document.getElementById("sender-mode-custom"),
+      customSmtpFields: document.getElementById("custom-smtp-fields"),
+      fields: {
+        user_id: document.getElementById("user_id"),
+        name: document.getElementById("name"),
+        recipient_emails: document.getElementById("recipient_emails"),
+        smtp_server: document.getElementById("smtp_server"),
+        smtp_port: document.getElementById("smtp_port"),
+        smtp_use_ssl: document.getElementById("smtp_use_ssl"),
+        sender_email: document.getElementById("sender_email"),
+        sender_password: document.getElementById("sender_password"),
+        reply_to: document.getElementById("reply_to"),
+        subject_prefix: document.getElementById("subject_prefix"),
+        sender_name: document.getElementById("sender_name"),
+        send_time: document.getElementById("send_time"),
+        timezone: document.getElementById("timezone"),
+        include_keywords: document.getElementById("include_keywords"),
+        exclude_keywords: document.getElementById("exclude_keywords")
+      }
+    };
+
+    function parseList(value) {
+      return value.split(/[\n,，、;]/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function buildJson() {
+      return JSON.stringify({ users: [currentConfig] }, null, 2);
+    }
+
+    function inferSenderMode() {
+      const hasCustomSender = Boolean(
+        currentConfig.smtp_server ||
+        currentConfig.smtp_port ||
+        currentConfig.smtp_use_ssl ||
+        currentConfig.sender_email ||
+        currentConfig.sender_password
+      );
+      senderMode = hasCustomSender ? "custom" : "shared";
+    }
+
+    function applySenderModeUI() {
+      const sharedActive = senderMode === "shared";
+      refs.senderModeShared.classList.toggle("active", sharedActive);
+      refs.senderModeCustom.classList.toggle("active", !sharedActive);
+      refs.customSmtpFields.classList.toggle("hidden", sharedActive);
+    }
+
+    function clearCustomSenderFields() {
+      currentConfig.smtp_server = "";
+      currentConfig.smtp_port = "";
+      currentConfig.smtp_use_ssl = "";
+      currentConfig.sender_email = "";
+      currentConfig.sender_password = "";
+    }
+
+    function setSenderMode(nextMode) {
+      senderMode = nextMode;
+      if (senderMode === "shared") {
+        clearCustomSenderFields();
+      }
+      applySenderModeUI();
+      syncFields();
+      renderPreview();
+    }
+
+    function syncFields() {
+      refs.fields.user_id.value = currentConfig.user_id;
+      refs.fields.name.value = currentConfig.name;
+      refs.fields.recipient_emails.value = currentConfig.recipient_emails.join(", ");
+      refs.fields.smtp_server.value = currentConfig.smtp_server || "";
+      refs.fields.smtp_port.value = currentConfig.smtp_port || "";
+      refs.fields.smtp_use_ssl.value = currentConfig.smtp_use_ssl ?? "";
+      refs.fields.sender_email.value = currentConfig.sender_email || "";
+      refs.fields.sender_password.value = currentConfig.sender_password || "";
+      refs.fields.reply_to.value = currentConfig.reply_to;
+      refs.fields.subject_prefix.value = currentConfig.subject_prefix;
+      refs.fields.sender_name.value = currentConfig.sender_name;
+      refs.fields.send_time.value = currentConfig.send_time;
+      refs.fields.timezone.value = currentConfig.timezone;
+      refs.fields.include_keywords.value = currentConfig.preferences.include_keywords.join(", ");
+      refs.fields.exclude_keywords.value = currentConfig.preferences.exclude_keywords.join(", ");
+      refs.maxItems.value = currentConfig.preferences.max_items;
+      refs.maxItemsValue.textContent = currentConfig.preferences.max_items;
+    }
+
+    function renderTemplateCards() {
+      refs.templateGrid.innerHTML = "";
+      PRESETS.forEach(preset => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "template-card" + (preset.key === currentPresetKey ? " active" : "");
+        card.innerHTML = `<h3>${preset.name}</h3><p>${preset.summary}</p><span class="tag">${preset.audience}</span>`;
+        card.addEventListener("click", () => {
+          currentPresetKey = preset.key;
+          currentConfig = JSON.parse(JSON.stringify(preset));
+          renderAll();
+          refs.status.textContent = `已切换到「${preset.name}」模板。`;
+        });
+        refs.templateGrid.appendChild(card);
+      });
+    }
+
+    function renderChips(container, options, selectedValues, onToggle) {
+      container.innerHTML = "";
+      options.forEach(option => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip" + (selectedValues.includes(option) ? " active" : "");
+        chip.textContent = option;
+        chip.addEventListener("click", () => onToggle(option));
+        container.appendChild(chip);
+      });
+    }
+
+    function renderPreview() {
+      refs.jsonOutput.textContent = buildJson();
+      refs.recipientPreview.textContent = currentConfig.recipient_emails.length
+        ? currentConfig.recipient_emails.join(", ")
+        : "未填写";
+      refs.maxItemsValue.textContent = currentConfig.preferences.max_items;
+    }
+
+    function renderAll() {
+      inferSenderMode();
+      syncFields();
+      renderTemplateCards();
+      applySenderModeUI();
+      renderChips(refs.categoryGrid, CATEGORY_OPTIONS, currentConfig.preferences.categories, value => {
+        const list = currentConfig.preferences.categories;
+        const index = list.indexOf(value);
+        if (index >= 0) list.splice(index, 1); else list.push(value);
+        renderAll();
+      });
+      renderChips(refs.subcategoryGrid, SUBCATEGORY_OPTIONS, currentConfig.preferences.subcategories, value => {
+        const list = currentConfig.preferences.subcategories;
+        const index = list.indexOf(value);
+        if (index >= 0) list.splice(index, 1); else list.push(value);
+        renderAll();
+      });
+      renderPreview();
+    }
+
+    function bindField(id, updater) {
+      refs.fields[id].addEventListener("input", event => {
+        updater(event.target.value);
+        renderPreview();
+      });
+    }
+
+    bindField("user_id", value => currentConfig.user_id = value.trim());
+    bindField("name", value => currentConfig.name = value.trim());
+    bindField("recipient_emails", value => currentConfig.recipient_emails = parseList(value));
+    bindField("smtp_server", value => currentConfig.smtp_server = value.trim());
+    bindField("smtp_port", value => currentConfig.smtp_port = value.trim());
+    bindField("sender_email", value => currentConfig.sender_email = value.trim());
+    bindField("sender_password", value => currentConfig.sender_password = value.trim());
+    bindField("reply_to", value => currentConfig.reply_to = value.trim());
+    bindField("subject_prefix", value => currentConfig.subject_prefix = value.trim());
+    bindField("sender_name", value => currentConfig.sender_name = value.trim());
+    bindField("send_time", value => currentConfig.send_time = value.trim());
+    bindField("timezone", value => currentConfig.timezone = value.trim());
+    bindField("include_keywords", value => currentConfig.preferences.include_keywords = parseList(value));
+    bindField("exclude_keywords", value => currentConfig.preferences.exclude_keywords = parseList(value));
+
+    refs.fields.smtp_use_ssl.addEventListener("change", event => {
+      currentConfig.smtp_use_ssl = event.target.value;
+      inferSenderMode();
+      applySenderModeUI();
+      renderPreview();
+    });
+
+    refs.senderModeShared.addEventListener("click", () => {
+      setSenderMode("shared");
+      refs.status.textContent = "已切换为共用系统发件账号模式。";
+    });
+
+    refs.senderModeCustom.addEventListener("click", () => {
+      setSenderMode("custom");
+      refs.status.textContent = "已切换为使用个人发件账号模式。";
+    });
+
+    refs.maxItems.addEventListener("input", event => {
+      currentConfig.preferences.max_items = Number(event.target.value);
+      renderPreview();
+    });
+
+    refs.copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(buildJson());
+        refs.status.textContent = "JSON 已复制到剪贴板。";
+      } catch (error) {
+        refs.status.textContent = "复制失败，请手动复制右侧 JSON。";
+      }
+    });
+
+    refs.downloadBtn.addEventListener("click", () => {
+      const blob = new Blob([buildJson()], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "users.json";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      refs.status.textContent = "users.json 已开始下载。";
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

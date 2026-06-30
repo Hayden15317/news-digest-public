@@ -1,0 +1,7 @@
+.trae/
+config.py
+config.py.backup.*
+news_email_system/
+news_config_web/
+*.log
+__pycache__/
