@@ -36,12 +36,37 @@ if errorlevel 1 (
 
 set "TARGET_BRANCH=main"
 set "HAS_CHANGES="
+set "AHEAD_COUNT=0"
+
+for /f "usebackq delims=" %%i in (`"%GIT_EXE%" rev-list --count origin/%TARGET_BRANCH%..HEAD 2^>nul`) do (
+  set "AHEAD_COUNT=%%i"
+)
 
 for /f "usebackq delims=" %%i in (`"%GIT_EXE%" status --short -- reports index.html .nojekyll .github/workflows/deploy-github-pages.yml publish_github_pages.bat send_and_publish.bat 2^>nul`) do (
   set "HAS_CHANGES=1"
 )
 
 if not defined HAS_CHANGES (
+  if not "%AHEAD_COUNT%"=="0" (
+    echo [INFO] No new Pages files to commit, but local branch is ahead by %AHEAD_COUNT% commit^(s^).
+    echo [INFO] Pushing existing local commits to origin/%TARGET_BRANCH% ...
+    "%GIT_EXE%" push origin %TARGET_BRANCH%
+    if errorlevel 1 (
+      echo [ERROR] Push failed. Please check:
+      echo        1. GitHub login status
+      echo        2. Remote origin URL
+      echo        3. Default branch is %TARGET_BRANCH%
+      pause
+      exit /b 1
+    )
+    echo [SUCCESS] Push completed.
+    echo [INFO] GitHub Actions will publish Pages automatically.
+    echo [INFO] Wait from several seconds to a few minutes.
+    echo [INFO] Publish URL:
+    echo        https://hayden15317.github.io/news-digest-public/reports/latest.html
+    pause
+    exit /b 0
+  )
   echo [INFO] No Pages-related changes were found.
   echo [INFO] If you just generated a report, confirm files under reports are updated.
   pause
