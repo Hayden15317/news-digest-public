@@ -5,10 +5,18 @@ cd /d "%~dp0"
 
 echo [INFO] Prepare GitHub Pages publish...
 
+set "GIT_EXE="
 where git >nul 2>nul
-if errorlevel 1 (
-  echo [ERROR] Git was not found in PATH.
-  echo [TIP] Install Git first, then run this script again.
+if not errorlevel 1 (
+  set "GIT_EXE=git"
+)
+if not defined GIT_EXE if exist "C:\Program Files\Git\cmd\git.exe" set "GIT_EXE=C:\Program Files\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "C:\Program Files\Git\bin\git.exe" set "GIT_EXE=C:\Program Files\Git\bin\git.exe"
+if not defined GIT_EXE if exist "C:\Program Files (x86)\Git\cmd\git.exe" set "GIT_EXE=C:\Program Files (x86)\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "C:\Program Files (x86)\Git\bin\git.exe" set "GIT_EXE=C:\Program Files (x86)\Git\bin\git.exe"
+if not defined GIT_EXE (
+  echo [ERROR] Git was not found.
+  echo [TIP] Install Git first, or add Git to PATH, then run this script again.
   pause
   exit /b 1
 )
@@ -19,7 +27,7 @@ if not exist ".git" (
   exit /b 1
 )
 
-git rev-parse --is-inside-work-tree >nul 2>nul
+"%GIT_EXE%" rev-parse --is-inside-work-tree >nul 2>nul
 if errorlevel 1 (
   echo [ERROR] Git repository check failed.
   pause
@@ -29,7 +37,7 @@ if errorlevel 1 (
 set "TARGET_BRANCH=main"
 set "HAS_CHANGES="
 
-for /f "usebackq delims=" %%i in (`git status --short -- reports index.html .nojekyll .github/workflows/deploy-github-pages.yml publish_github_pages.bat send_and_publish.bat 2^>nul`) do (
+for /f "usebackq delims=" %%i in (`"%GIT_EXE%" status --short -- reports index.html .nojekyll .github/workflows/deploy-github-pages.yml publish_github_pages.bat send_and_publish.bat 2^>nul`) do (
   set "HAS_CHANGES=1"
 )
 
@@ -51,14 +59,14 @@ echo        - publish_github_pages.bat
 echo        - send_and_publish.bat
 echo.
 
-git add reports index.html .nojekyll .github/workflows/deploy-github-pages.yml publish_github_pages.bat send_and_publish.bat
+"%GIT_EXE%" add reports index.html .nojekyll .github/workflows/deploy-github-pages.yml publish_github_pages.bat send_and_publish.bat
 if errorlevel 1 (
   echo [ERROR] git add failed.
   pause
   exit /b 1
 )
 
-git commit -m "Publish GitHub Pages %PUBLISH_TIME%"
+"%GIT_EXE%" commit -m "Publish GitHub Pages %PUBLISH_TIME%"
 if errorlevel 1 (
   echo [ERROR] git commit failed.
   echo [TIP] If there is nothing to commit, you can close this window.
@@ -67,7 +75,7 @@ if errorlevel 1 (
 )
 
 echo [INFO] Pushing to origin/%TARGET_BRANCH% ...
-git push origin %TARGET_BRANCH%
+"%GIT_EXE%" push origin %TARGET_BRANCH%
 if errorlevel 1 (
   echo [ERROR] Push failed. Please check:
   echo        1. GitHub login status
