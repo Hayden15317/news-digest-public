@@ -4,9 +4,11 @@
 
 import logging
 import os
+import re
 import smtplib
+from difflib import SequenceMatcher
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from email.utils import formataddr
 from email.header import Header
@@ -15,6 +17,7 @@ from email.mime.text import MIMEText
 from html import escape
 from typing import Dict, List, Optional
 
+import requests
 from fetcher import NewsItem
 from config import (
     CATEGORY_DISPLAY_ORDER,
@@ -35,13 +38,16 @@ LOCAL_REPORTS_DIR = os.path.join(os.path.dirname(__file__), "reports")
 PUBLIC_REPORTS_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "reports")
 )
+COMPATIBLE_EMAIL_DOMAINS = {
+    "gffunds.com.cn",
+}
 
 ANCHOR_SLUG_MAP = {
     "top": "top",
     "all-news": "all-news",
     "总新闻数": "all-news",
     "行业新闻": "industry-news",
-    "金融新闻": "finance-news",
+    "AI板块": "ai-news",
     "时政新闻": "current-affairs-news",
     "其他": "other-news",
     "基金TA": "fund-ta",
@@ -49,12 +55,11 @@ ANCHOR_SLUG_MAP = {
     "证券": "securities",
     "A股": "a-share",
     "港股": "hk-share",
-    "行情": "market",
-    "宏观经济": "macro",
-    "利率": "rates",
-    "汇率": "fx",
+    "AI应用": "ai-apps",
+    "AI产业": "ai-industry",
     "民生": "livelihood",
     "社会": "society",
+    "国际": "global",
     "国务院": "state-council",
     "发改委": "ndrc",
     "央行": "pbc",
@@ -79,6 +84,7 @@ class EmailDeliveryConfig:
     subject_prefix: str = "【广发基金视角晨报】"
     public_report_site_url: str = PUBLIC_REPORT_SITE_URL
     report_slug: str = "latest"
+    delivery_mode_override: str = "auto"
 
     def __post_init__(self):
         if self.recipient_emails is None:
@@ -105,6 +111,84 @@ class EmailSender:
             self.delivery_config.public_report_site_url.strip().rstrip("/")
         )
         self.report_slug = self._normalize_report_slug(self.delivery_config.report_slug)
+        self.public_navigation_report_slug = self.report_slug
+        self.public_url_cache_token = ""
+        self.delivery_mode_override = self._normalize_delivery_mode(
+            self.delivery_config.delivery_mode_override
+        )
+        self.translation_cache: Dict[str, str] = {}
+        self.translation_session = requests.Session()
+
+    def _contains_cjk(self, text: str) -> bool:
+        return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+    def _looks_mostly_english(self, text: str) -> bool:
+        if not text:
+            return False
+        english_letters = len(re.findall(r"[A-Za-z]", text))
+        cjk_letters = len(re.findall(r"[\u4e00-\u9fff]", text))
+        return english_letters >= 8 and english_letters > cjk_letters * 2
+
+    def _translate_text_to_chinese(self, text: str) -> str:
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return ""
+        if self._contains_cjk(cleaned):
+            return cleaned
+        cached = self.translation_cache.get(cleaned)
+        if cached is not None:
+            return cached
+
+        translated = cleaned
+        endpoints = (
+            (
+                "https://api.mymemory.translated.net/get",
+                {"q": cleaned, "langpair": "en|zh-CN"},
+            ),
+            (
+                "https://translate.googleapis.com/translate_a/single",
+                {"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": cleaned},
+            ),
+        )
+        for url, params in endpoints:
+            try:
+                response = self.translation_session.get(url, params=params, timeout=6)
+                response.raise_for_status()
+                if "mymemory" in url:
+                    payload = response.json()
+                    candidate = str((payload.get("responseData") or {}).get("translatedText") or "").strip()
+                else:
+                    payload = response.json()
+                    parts = []
+                    if isinstance(payload, list) and payload and isinstance(payload[0], list):
+                        for segment in payload[0]:
+                            if isinstance(segment, list) and segment and segment[0]:
+                                parts.append(str(segment[0]))
+                    candidate = "".join(parts).strip()
+                if candidate:
+                    translated = candidate
+                    break
+            except Exception:
+                continue
+
+        self.translation_cache[cleaned] = translated
+        return translated
+
+    def _display_title(self, item: NewsItem) -> str:
+        title = (item.title or "").strip()
+        if not title:
+            return "无标题"
+        if getattr(item, "is_domestic", True) and not self._looks_mostly_english(title):
+            return title
+        return self._translate_text_to_chinese(title)
+
+    def _display_summary(self, item: NewsItem, limit: int) -> str:
+        summary = (item.summary or item.content or "暂无摘要").strip()
+        if not summary:
+            return "暂无摘要"
+        if not getattr(item, "is_domestic", True) or self._looks_mostly_english(summary):
+            summary = self._translate_text_to_chinese(summary)
+        return self._truncate_text(summary, limit)
 
     def send_news_email(
         self,
@@ -119,30 +203,52 @@ class EmailSender:
         if date is None:
             date = datetime.now()
 
-        # 生成邮件内容
         subject = self._generate_subject(date, len(news_items))
-        html_content = self._generate_html(news_items, date, navigation_mode="email")
+        recipient_groups = self._group_recipients_by_mode()
+        if not recipient_groups:
+            logger.error("邮件发送失败: 未配置收件人")
+            return False
 
-        # 发送邮件
-        return self._send_email(subject, html_content, news_items)
+        overall_success = True
+        for delivery_mode, recipients in recipient_groups.items():
+            navigation_mode = "compat" if delivery_mode == "compat" else "email"
+            html_content = self._generate_html(news_items, date, navigation_mode=navigation_mode)
+            logger.info(
+                "正在向 %s 发送%s版邮件: %s",
+                len(recipients),
+                "兼容" if delivery_mode == "compat" else "标准",
+                ", ".join(recipients),
+            )
+            if not self._send_email(subject, html_content, news_items, recipients):
+                overall_success = False
+
+        return overall_success
 
     def export_web_report(self, news_items: List[NewsItem], date: datetime = None) -> Dict[str, str]:
         news_items = news_items or []
         if date is None:
             date = datetime.now()
 
+        export_slug = self._build_versioned_report_slug(date)
+        stable_slug = self.report_slug
+        self.current_report_marker = export_slug
+        self.public_navigation_report_slug = stable_slug
+        self.public_url_cache_token = export_slug
         html_content = self._generate_html(news_items, date, navigation_mode="internal")
         written_paths = []
-        for output_path in self._get_report_output_paths():
+        for output_path in self._get_report_output_paths(export_slug):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as file:
                 file.write(html_content)
             written_paths.append(output_path)
 
         return {
-            "slug": self.report_slug,
-            "local_report_url": f"/reports/{self.report_slug}.html",
-            "public_report_url": self._build_public_report_url(),
+            "slug": export_slug,
+            "report_marker": export_slug,
+            "local_report_url": f"/reports/{export_slug}.html",
+            "public_report_url": self._build_public_report_url(report_slug=stable_slug),
+            "versioned_public_report_url": self._build_public_report_url(report_slug=export_slug),
+            "latest_public_report_url": self._build_public_report_url(report_slug="latest"),
             "written_paths": ", ".join(written_paths),
         }
 
@@ -163,28 +269,39 @@ class EmailSender:
         生成HTML邮件内容
         """
         news_items = news_items or []
+        news_items = self._prepare_display_items(news_items)
         date_str = date.strftime("%Y年%m月%d日")
+        report_marker = escape(getattr(self, "current_report_marker", "") or "", quote=True)
 
         total_count = len(news_items)
         industry_count = len([n for n in news_items if n.category == "行业新闻"])
-        finance_count = len([n for n in news_items if n.category == "金融新闻"])
+        ai_count = len([n for n in news_items if n.category == "AI板块"])
         politics_count = len([n for n in news_items if n.category == "时政新闻"])
+        compact_external_links = navigation_mode == "compat"
 
         categorized_news = self._organize_by_category(news_items)
         overview_html = self._generate_overview_html(news_items)
-        highlights_html = self._generate_top_highlights_html(news_items)
+        highlights_html = self._generate_top_highlights_html(
+            news_items,
+            allow_external_links=not compact_external_links,
+        )
         pulse_html = self._generate_market_pulse_html(news_items)
         source_board_html = self._generate_source_board_html(news_items)
+        compatibility_notice_html = self._generate_compatibility_notice_html(navigation_mode)
         stats_html = self._generate_stats_html(
             total_count=total_count,
             industry_count=industry_count,
-            finance_count=finance_count,
+            finance_count=ai_count,
             politics_count=politics_count,
             navigation_mode=navigation_mode,
         )
 
         if news_items:
-            content_html = f'<div id="all-news" name="all-news">{self._generate_category_html(categorized_news)}</div>'
+            content_html = (
+                f'<div id="all-news" name="all-news">'
+                f'{self._generate_category_html(categorized_news, allow_external_links=not compact_external_links)}'
+                f'</div>'
+            )
         else:
             content_html = '<div id="all-news" name="all-news"><p style="color:#666;text-align:center;">今日暂无抓取到的新闻</p></div>'
 
@@ -194,6 +311,7 @@ class EmailSender:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>每日新闻推送</title>
+    <meta name="x-report-marker" content="{report_marker}">
     <style>
         body {{
             font-family: 'Segoe UI', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
@@ -555,6 +673,22 @@ class EmailSender:
             color: #53607a;
             font-size: 12px;
         }}
+        .compat-note {{
+            margin: 20px 20px 0 20px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid #d9e3ff;
+            background: #f7f9ff;
+            color: #42506b;
+            font-size: 13px;
+        }}
+        .compat-link {{
+            display: inline-block;
+            margin-top: 10px;
+            color: #4d63d6;
+            font-weight: 600;
+            text-decoration: none;
+        }}
         .footer {{
             background-color: #f8f9fa;
             padding: 20px;
@@ -579,6 +713,7 @@ class EmailSender:
     </style>
 </head>
 <body>
+    <div id="top" name="top"></div>
     <div class="container">
         <div class="header">
             <h1>广发基金视角晨报</h1>
@@ -589,10 +724,11 @@ class EmailSender:
         <div class="stats">
             {stats_html}
         </div>
+        {compatibility_notice_html}
 
         <div class="content">
             {highlights_html}
-            <div id="top" name="top" class="overview">{overview_html}</div>
+            <div class="overview">{overview_html}</div>
             {pulse_html}
 {content_html}
             {source_board_html}
@@ -612,38 +748,151 @@ class EmailSender:
 
         return html_template.format(
             date_str=date_str,
+            report_marker=report_marker,
             content_html=content_html,
             highlights_html=highlights_html,
             overview_html=overview_html,
             pulse_html=pulse_html,
             source_board_html=source_board_html,
             stats_html=stats_html,
+            compatibility_notice_html=compatibility_notice_html,
             total_count=total_count,
             industry_count=industry_count,
-            finance_count=finance_count,
+            finance_count=ai_count,
             politics_count=politics_count,
             send_time=send_time
         )
 
     def _select_highlights(self, news_items: List[NewsItem], limit: int = 4) -> List[NewsItem]:
+        if not news_items:
+            return []
+
+        candidates = news_items[: min(len(news_items), max(limit * 8, 24))]
+        fund_industry_candidates = [
+            item for item in candidates
+            if item.category == "行业新闻" and self._is_fund_priority_highlight(item)
+        ]
+        if len(fund_industry_candidates) >= limit:
+            allowed_candidates = fund_industry_candidates
+        else:
+            allowed_candidates = [
+                item for item in candidates
+                if item.category == "行业新闻" or item.category == "AI板块"
+            ]
+
         ranked = sorted(
-            news_items,
-            key=lambda item: (item.priority_score, item.relevance_score, item.published),
+            enumerate(allowed_candidates),
+            key=lambda pair: (
+                self._highlight_score(pair[1]) - pair[0] * 3,
+                pair[1].published,
+            ),
             reverse=True,
         )
-        return ranked[:limit]
 
-    def _generate_top_highlights_html(self, news_items: List[NewsItem]) -> str:
+        prioritized = [item for _, item in ranked if self._is_fund_priority_highlight(item)]
+        backups = [item for _, item in ranked if not self._is_fund_priority_highlight(item)]
+        selected: List[NewsItem] = []
+        for item in prioritized + backups:
+            if any(self._is_duplicate_highlight(item, existing) for existing in selected):
+                continue
+            selected.append(item)
+            if len(selected) >= limit:
+                break
+        return selected
+
+    def _normalize_highlight_title(self, text: str) -> str:
+        normalized = (text or "").lower()
+        normalized = normalized.replace("亿元", "亿")
+        normalized = normalized.replace("万亿元", "万亿")
+        normalized = re.sub(r"[“”\"'‘’（）()\[\]【】<>《》]", "", normalized)
+        normalized = re.sub(r"[，,。.!！?？:：;；、\-—_/\s]+", "", normalized)
+        return normalized.strip()
+
+    def _is_duplicate_highlight(self, left: NewsItem, right: NewsItem) -> bool:
+        left_title = self._normalize_highlight_title(left.title or "")
+        right_title = self._normalize_highlight_title(right.title or "")
+        if not left_title or not right_title:
+            return False
+        if left_title == right_title:
+            return True
+        shorter, longer = sorted((left_title, right_title), key=len)
+        if shorter and len(shorter) >= 12 and shorter in longer and len(shorter) / max(len(longer), 1) >= 0.72:
+            return True
+        return SequenceMatcher(None, left_title, right_title).ratio() >= 0.84
+
+    def _highlight_score(self, item: NewsItem) -> int:
+        text = " ".join(
+            [
+                item.title or "",
+                item.summary or "",
+                item.content or "",
+                item.source or "",
+            ]
+        ).lower()
+        score = item.priority_score + item.relevance_score
+
+        for keyword in ("公募", "公募基金", "etf", "reits", "qdii", "fof", "指数基金", "基金发行", "新发基金", "募集", "资金流向", "净流入", "净流出"):
+            if keyword.lower() in text:
+                score += 10
+        for keyword in ("培训班", "教材编写", "启动会", "代表大会", "协会组织召开", "关于举办"):
+            if keyword in (item.title or ""):
+                score -= 20
+        if "基金业协会" in (item.source or "") and "etf" not in text and "公募" not in text and "基金发行" not in text:
+            score -= 8
+        if item.category == "行业新闻" and item.subcategory in {"基金", "基金TA"}:
+            score += 24
+        elif item.category == "时政新闻" and item.subcategory in {"民生", "社会"}:
+            score -= 40
+        return score
+
+    def _is_fund_priority_highlight(self, item: NewsItem) -> bool:
+        if item.category != "行业新闻":
+            return False
+        if item.subcategory in {"基金", "基金TA"}:
+            return True
+
+        text = " ".join(
+            [
+                item.title or "",
+                item.summary or "",
+                item.content or "",
+                item.source or "",
+            ]
+        ).lower()
+        return any(
+            keyword in text
+            for keyword in (
+                "公募",
+                "公募基金",
+                "基金发行",
+                "新发基金",
+                "etf",
+                "reits",
+                "fof",
+                "qdii",
+                "基金ta",
+                "登记结算",
+                "清算交收",
+                "基金销售",
+                "中国结算",
+            )
+        )
+
+    def _generate_top_highlights_html(
+        self,
+        news_items: List[NewsItem],
+        allow_external_links: bool = True,
+    ) -> str:
         highlights = self._select_highlights(news_items, limit=3)
         if not highlights:
             return ""
 
         cards = []
         for index, item in enumerate(highlights, 1):
-            title = escape(item.title) if item.title else "无标题"
+            title = escape(self._display_title(item))
             has_valid_link = self._is_valid_news_link(item.link)
             link = escape(item.link, quote=True) if has_valid_link else ""
-            summary = self._truncate_text(item.summary or item.content or "暂无摘要", 68)
+            summary = self._display_summary(item, 68)
             source = escape(item.source) if item.source else "未知来源"
             meta = f"{escape(item.category)} / {escape(item.subcategory)}"
             time_text = self._format_published(item)
@@ -652,7 +901,7 @@ class EmailSender:
             cards.append(
                 f'''<div class="highlight-card">
     <div class="highlight-rank">重点 {index}</div>
-    <div class="highlight-title">{self._render_title_link(title, link)}</div>
+    <div class="highlight-title">{self._render_title_link(title, link, allow_external_links=allow_external_links)}</div>
     <div class="highlight-summary">{escape(summary)}</div>
     <div class="tag-row">
         <span class="tag">{meta}</span>
@@ -764,9 +1013,11 @@ class EmailSender:
             ("券商监管", ("券商", "证券公司", "证监会", "交易所", "IPO", "并购重组")),
             ("A股风格", ("A股", "沪指", "深成指", "北向资金", "融资余额")),
             ("港股配置", ("港股", "恒生", "港股通", "南向资金", "恒生科技")),
+            ("AI前沿", ("AI", "人工智能", "大模型", "生成式AI", "机器人", "算力", "英伟达", "OpenAI")),
             ("货币政策", ("中国人民银行", "LPR", "MLF", "降准", "降息", "逆回购", "社融")),
             ("财政政策", ("财政部", "专项债", "预算", "税收", "国债")),
             ("汇率外资", ("人民币", "汇率", "美元指数", "离岸人民币", "中间价")),
+            ("国际时政", ("美国", "白宫", "欧盟", "俄罗斯", "乌克兰", "中东", "关税", "选举", "国际")),
         ]
         for label, keywords in signal_map:
             if any(keyword in text for keyword in keywords):
@@ -774,8 +1025,8 @@ class EmailSender:
 
         if item.category == "行业新闻" and "行业主线" not in tags:
             tags.append("行业主线")
-        elif item.category == "金融新闻" and "宏观市场" not in tags:
-            tags.append("宏观市场")
+        elif item.category == "AI板块" and "AI专题" not in tags:
+            tags.append("AI专题")
         elif item.category == "时政新闻" and "政策信号" not in tags:
             tags.append("政策信号")
 
@@ -787,6 +1038,20 @@ class EmailSender:
         earliest = min(item.published for item in news_items)
         latest = max(item.published for item in news_items)
         return f"{earliest.strftime('%m-%d %H:%M')} 至 {latest.strftime('%m-%d %H:%M')}"
+
+    def _prepare_display_items(self, news_items: List[NewsItem]) -> List[NewsItem]:
+        display_items: List[NewsItem] = []
+        for item in news_items:
+            display_title = self._display_title(item)
+            display_summary = self._display_summary(item, 240)
+            display_items.append(
+                replace(
+                    item,
+                    title=display_title or item.title,
+                    summary=display_summary or item.summary,
+                )
+            )
+        return display_items
 
     def _truncate_text(self, text: str, limit: int) -> str:
         clean = (text or "").strip()
@@ -856,13 +1121,28 @@ class EmailSender:
         slug = "".join(normalized).strip("-")
         return slug or "latest"
 
-    def _get_report_output_paths(self) -> List[str]:
-        report_name = f"{self.report_slug}.html"
+    def _build_versioned_report_slug(self, date: datetime) -> str:
+        timestamp = (date or datetime.now()).strftime("%Y%m%d-%H%M%S")
+        if self.report_slug == "latest":
+            return f"digest-{timestamp}"
+        return f"{self.report_slug}-{timestamp}"
+
+    def _get_report_output_paths(self, export_slug: Optional[str] = None) -> List[str]:
+        primary_slug = self._normalize_report_slug(export_slug or self.report_slug)
+        report_name = f"{primary_slug}.html"
         paths = [
             os.path.join(LOCAL_REPORTS_DIR, report_name),
             os.path.join(PUBLIC_REPORTS_DIR, report_name),
         ]
-        if self.report_slug != "latest":
+        if primary_slug != self.report_slug:
+            stable_report_name = f"{self.report_slug}.html"
+            paths.extend(
+                [
+                    os.path.join(LOCAL_REPORTS_DIR, stable_report_name),
+                    os.path.join(PUBLIC_REPORTS_DIR, stable_report_name),
+                ]
+            )
+        if primary_slug != "latest":
             paths.extend(
                 [
                     os.path.join(LOCAL_REPORTS_DIR, "latest.html"),
@@ -880,13 +1160,38 @@ class EmailSender:
             unique_paths.append(normalized)
         return unique_paths
 
-    def _build_public_report_url(self, anchor: str = "") -> str:
+    def _build_public_report_url(self, anchor: str = "", report_slug: Optional[str] = None) -> str:
         if not self.public_report_site_url:
             return ""
+        target_slug = self._normalize_report_slug(
+            report_slug or self.public_navigation_report_slug or self.report_slug
+        )
+        cache_token = (self.public_url_cache_token or "").strip()
+        query_text = f"?v={cache_token}" if cache_token else ""
         anchor_text = (anchor or "").strip()
         if anchor_text and not anchor_text.startswith("#"):
             anchor_text = f"#{anchor_text}"
-        return f"{self.public_report_site_url}/reports/{self.report_slug}.html{anchor_text}"
+        return f"{self.public_report_site_url}/reports/{target_slug}.html{query_text}{anchor_text}"
+
+    def _generate_compatibility_notice_html(self, navigation_mode: str) -> str:
+        if navigation_mode != "compat":
+            return ""
+
+        public_url = self._build_public_report_url()
+        if public_url:
+            link_html = (
+                f'<a class="compat-link" href="{escape(public_url, quote=True)}" '
+                'target="_blank" rel="noopener noreferrer">查看完整网页版晨报</a>'
+            )
+        else:
+            link_html = ""
+
+        return (
+            '<div class="compat-note">'
+            '当前收件箱使用兼容版邮件：优先保留邮件内阅读与栏目定位，减少外链密度以提升企业邮箱投递通过率。'
+            f'{link_html}'
+            '</div>'
+        )
 
     def _build_navigation_link(self, anchor: str, navigation_mode: str) -> tuple[str, str, str, str]:
         anchor_id = anchor.lstrip("#")
@@ -912,7 +1217,7 @@ class EmailSender:
         stat_items = [
             ("all-news", total_count, "总新闻数"),
             (self._make_anchor_id('行业新闻'), industry_count, "行业新闻"),
-            (self._make_anchor_id('金融新闻'), finance_count, "金融新闻"),
+            (self._make_anchor_id('AI板块'), finance_count, "AI板块"),
             (self._make_anchor_id('时政新闻'), politics_count, "时政新闻"),
         ]
         cards = []
@@ -931,15 +1236,16 @@ class EmailSender:
     def _category_description(self, category: str) -> str:
         descriptions = {
             "行业新闻": "证券、基金、A股、港股，优先展示基金投研与资本市场动态。",
-            "金融新闻": "宏观经济、利率、汇率和市场流动性，辅助判断配置环境。",
-            "时政新闻": "央行、财政部等政策与监管信号，补充制度与政策背景。",
+            "AI板块": "人工智能、算力、模型与应用进展，补充公募基金关注的科技主线。",
+            "时政新闻": "国内民生政策与国外重要事件并行，补充制度、监管与国际背景。",
             "其他": "未归入核心维度的补充信息。",
         }
         return descriptions.get(category, "分类新闻速览")
 
     def _generate_category_html(
         self,
-        categorized_news: Dict[str, Dict[str, List[NewsItem]]]
+        categorized_news: Dict[str, Dict[str, List[NewsItem]]],
+        allow_external_links: bool = True,
     ) -> str:
         """
         生成分类别的HTML内容
@@ -988,7 +1294,7 @@ class EmailSender:
                 )
 
                 for item in items:
-                    news_html = self._generate_news_item_html(item)
+                    news_html = self._generate_news_item_html(item, allow_external_links=allow_external_links)
                     html_parts.append(news_html)
 
                 html_parts.append('</div>')  # end subcategory
@@ -997,13 +1303,13 @@ class EmailSender:
 
         return '\n'.join(html_parts)
 
-    def _generate_news_item_html(self, item: NewsItem) -> str:
+    def _generate_news_item_html(self, item: NewsItem, allow_external_links: bool = True) -> str:
         """
         生成单个新闻条目的HTML
         """
         time_str = self._format_published(item)
-        summary = escape(item.summary) if item.summary else "暂无摘要"
-        title = escape(item.title) if item.title else "无标题"
+        summary = escape(self._display_summary(item, 150))
+        title = escape(self._display_title(item))
         source = escape(item.source) if item.source else "未知来源"
         has_valid_link = self._is_valid_news_link(item.link)
         link = escape(item.link, quote=True) if has_valid_link else ""
@@ -1016,7 +1322,7 @@ class EmailSender:
 
         return f'''<div class="news-item">
     <div class="news-title">
-        {self._render_title_link(title, link)}
+        {self._render_title_link(title, link, allow_external_links=allow_external_links)}
     </div>
     {f'<div class="news-tag-row">{tags_html}</div>' if tags_html else ''}
     {f'<div class="news-focus">{focus_reason}</div>' if focus_reason else ''}
@@ -1031,10 +1337,45 @@ class EmailSender:
         clean_link = (link or "").strip().lower()
         return clean_link.startswith("http://") or clean_link.startswith("https://")
 
-    def _render_title_link(self, title: str, link: str) -> str:
-        if link:
+    def _render_title_link(self, title: str, link: str, allow_external_links: bool = True) -> str:
+        if link and allow_external_links:
             return f'<a href="{link}" target="_blank" rel="noopener noreferrer">{title}</a>'
         return f'<span>{title}</span>'
+
+    def _group_recipients_by_mode(self) -> Dict[str, List[str]]:
+        if self.delivery_mode_override in {"standard", "compat"}:
+            return {
+                self.delivery_mode_override: [
+                    email.strip()
+                    for email in (self.recipient_emails or [])
+                    if email.strip()
+                ]
+            }
+
+        grouped: Dict[str, List[str]] = {"standard": [], "compat": []}
+        for email in self.recipient_emails or []:
+            if self._requires_compatible_mode(email):
+                grouped["compat"].append(email)
+            else:
+                grouped["standard"].append(email)
+        return {mode: recipients for mode, recipients in grouped.items() if recipients}
+
+    def _requires_compatible_mode(self, email: str) -> bool:
+        normalized = (email or "").strip().lower()
+        if "@" not in normalized:
+            return False
+        domain = normalized.split("@", 1)[1]
+        return domain in COMPATIBLE_EMAIL_DOMAINS
+
+    def _normalize_delivery_mode(self, value: str) -> str:
+        normalized = (value or "auto").strip().lower()
+        if normalized in {"full", "完整版"}:
+            return "standard"
+        if normalized in {"compat", "compatible", "兼容版"}:
+            return "compat"
+        if normalized in {"standard", "auto"}:
+            return normalized
+        return "auto"
 
     def _generate_plain_text(self, subject: str, news_items: List[NewsItem]) -> str:
         lines = [subject, ""]
@@ -1066,23 +1407,30 @@ class EmailSender:
                 lines.append("")
         return "\n".join(lines).strip()
 
-    def _send_email(self, subject: str, html_content: str, news_items: List[NewsItem]) -> bool:
+    def _send_email(
+        self,
+        subject: str,
+        html_content: str,
+        news_items: List[NewsItem],
+        recipient_emails: Optional[List[str]] = None,
+    ) -> bool:
         """
         发送邮件
         """
         try:
-            if not self.recipient_emails:
+            target_recipients = [email.strip() for email in (recipient_emails or self.recipient_emails or []) if email.strip()]
+            if not target_recipients:
                 logger.error("邮件发送失败: 未配置收件人")
                 return False
 
-            logger.info(f"正在发送邮件到 {len(self.recipient_emails)} 个收件人...")
+            logger.info(f"正在发送邮件到 {len(target_recipients)} 个收件人...")
 
             # 创建邮件对象
             msg = MIMEMultipart('alternative')
             msg['Subject'] = Header(subject, 'utf-8')
             sender_display_name = str(Header(self.sender_name, 'utf-8'))
             msg['From'] = formataddr((sender_display_name, self.sender_email))
-            msg['To'] = ', '.join(self.recipient_emails)
+            msg['To'] = ', '.join(target_recipients)
             if self.reply_to:
                 msg['Reply-To'] = self.reply_to
 
@@ -1106,7 +1454,7 @@ class EmailSender:
             # 发送邮件
             server.sendmail(
                 self.sender_email,
-                self.recipient_emails,
+                target_recipients,
                 msg.as_string()
             )
 
