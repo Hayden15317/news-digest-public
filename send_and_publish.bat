@@ -23,17 +23,9 @@ if errorlevel 1 (
 )
 
 echo [INFO] Sending mail now...
-python news_email_system\main.py --once --user-config "%USER_CONFIG%"
+python news_email_system\web_control.py --send-and-publish --user-config "%USER_CONFIG%"
 if errorlevel 1 (
-  echo [ERROR] Send mail failed. Publish step was skipped.
-  pause
-  exit /b 1
-)
-
-echo [INFO] Mail sent. Publishing GitHub Pages...
-call "%~dp0publish_github_pages.bat"
-if errorlevel 1 (
-  echo [ERROR] GitHub Pages publish failed.
+  echo [ERROR] Send or publish flow failed.
   pause
   exit /b 1
 )
